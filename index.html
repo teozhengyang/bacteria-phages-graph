@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>D3 Tree + Matrix</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: sans-serif; }
+    text { font-size: 12px; }
+    .link { fill: none; stroke: #999; stroke-width: 1.5px; }
+  </style>
+</head>
+<body>
+  <svg id="viz" width="1200" height="600"></svg>
+
+  <script>
+    const treeData = {
+      name: "Bacteria",
+      children: [
+        {
+          name: "Group A",
+          children: [
+            { name: "RGM2", values: [0,0,0,1,0,0,1,0,0,0] },
+            { name: "RGM14", values: [0,1,0,1,0,0,0,0,0,0] },
+            { name: "RGM23", values: [1,0,1,1,1,1,1,1,0,0] }
+          ]
+        },
+        {
+          name: "Group B",
+          children: [
+            { name: "RGM76", values: [0,0,1,1,0,0,0,0,0,0] },
+            { name: "RGM100", values: [0,0,0,0,0,0,0,0,0,0] },
+            { name: "RGM104", values: [0,0,0,0,0,0,0,0,0,0] },
+            { name: "RGM106", values: [0,0,1,0,1,0,1,1,0,1] },
+            { name: "RGM110", values: [0,0,0,0,1,0,1,0,0,1] }
+          ]
+        }
+      ]
+    };
+
+    const headers = ["Jsb1", "Jsb2", "Jsb3", "Jsb4", "Key1", "Key2", "Key3", "Key4", "Pfo1", "Pfo2"];
+
+    const svg = d3.select("#viz"),
+          width = +svg.attr("width"),
+          height = +svg.attr("height"),
+          margin = { top: 60, right: 40, bottom: 40, left: 200 },
+          cellSize = 30;
+
+    // Create tree layout
+    const treeLayout = d3.tree()
+      .size([height - margin.top - margin.bottom, 200]); // width for tree
+
+    const root = d3.hierarchy(treeData);
+    treeLayout(root);
+
+    // Align matrix next to deepest leaf nodes
+    const maxTreeX = d3.max(root.descendants(), d => d.y);
+
+    const yScale = d3.scaleBand()
+      .domain(root.leaves().map(d => d.data.name))
+      .range([margin.top, height - margin.bottom])
+      .padding(0.2);
+
+    const xScale = d3.scaleBand()
+      .domain(d3.range(headers.length))
+      .range([margin.left + maxTreeX + 50, margin.left + maxTreeX + 50 + headers.length * cellSize])
+      .padding(0.2);
+
+    // Draw tree links
+    svg.selectAll(".link")
+      .data(root.links())
+      .enter()
+      .append("path")
+      .attr("class", "link")
+      .attr("d", d3.linkHorizontal()
+        .x(d => margin.left + d.y)
+        .y(d => d.x)
+      );
+
+    // Draw tree nodes
+    svg.selectAll(".node")
+      .data(root.descendants())
+      .enter()
+      .append("g")
+      .attr("transform", d => `translate(${margin.left + d.y},${d.x})`)
+      .each(function(d) {
+        d3.select(this).append("circle")
+          .attr("r", 5)
+          .attr("fill", d.children ? "#999" : "#1f77b4");
+
+        d3.select(this).append("text")
+          .attr("dx", d.children ? -10 : 10)
+          .attr("dy", "0.35em")
+          .style("text-anchor", d.children ? "end" : "start")
+          .text(d.data.name);
+      });
+
+    // Draw column headers
+    svg.selectAll(".col-header")
+      .data(headers)
+      .enter()
+      .append("text")
+      .attr("x", (_, i) => xScale(i) + cellSize / 2)
+      .attr("y", margin.top - 20)
+      .attr("text-anchor", "middle")
+      .text(d => d);
+
+    // Draw matrix circles
+    root.leaves().forEach((leaf, rowIndex) => {
+      svg.selectAll(`.row-${rowIndex}`)
+        .data(leaf.data.values)
+        .enter()
+        .append("circle")
+        .attr("cx", (_, i) => xScale(i) + cellSize / 2)
+        .attr("cy", leaf.x)
+        .attr("r", 8)
+        .attr("fill", d => d ? "lightgreen" : "white")
+        .attr("stroke", "black");
+    });
+  </script>
+</body>
+</html>
