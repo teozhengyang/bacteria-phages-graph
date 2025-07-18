@@ -1,9 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { aggregatePhageClusterInfo } from '../utils/aggregatePhageClusterInfo'; // adjust path
-import PhageClusterInfoModal from './PhageClusterInfoModal'; // add the modal component (see previous code)
+import { aggregatePhageClusterInfo } from '../utils/aggregatePhageClusterInfo'; // adjust path as needed
+import PhageClusterInfoModal from './PhageClusterInfoModal';
 
-const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
+const TreeMatrix = ({
+  treeData,
+  headers,
+  visibleClusters,
+  visiblePhages,
+  clusterTree = [],
+  leafOnly = false,
+}) => {
   const ref = useRef();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -18,17 +25,21 @@ const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
     const fixedTreeLayoutWidth = 400;
     const offsetY = margin.top - 40;
 
+    // Filter clusters to only visible ones
     const filteredClusters = treeData.children.filter(c => visibleClusters.includes(c.name));
     const filteredTreeData = { ...treeData, children: filteredClusters };
 
+    // Create D3 hierarchy and tree layout
     const root = d3.hierarchy(filteredTreeData);
     d3.tree().size([0, fixedTreeLayoutWidth])(root);
 
     const leafCount = root.leaves().length;
     const height = Math.max(leafCount * 40 + margin.top + margin.bottom, 400);
 
+    // Recompute layout with vertical height
     d3.tree().size([height - margin.top - margin.bottom, fixedTreeLayoutWidth])(root);
 
+    // Filter headers for visible phages
     const filteredHeaders = headers.filter(h => visiblePhages.includes(h));
     const matrixWidth = filteredHeaders.length * cellSize;
     const xStart = margin.left + fixedTreeLayoutWidth + 50;
@@ -36,11 +47,12 @@ const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
 
     const xScale = d3.scaleBand()
       .domain(d3.range(filteredHeaders.length))
-      .range([xStart, xStart + filteredHeaders.length * cellSize])
+      .range([xStart, xStart + matrixWidth])
       .padding(0.4);
 
     svg.attr("width", svgWidth).attr("height", height);
 
+    // Draw links between nodes
     svg.selectAll(".link")
       .data(root.links())
       .enter()
@@ -54,6 +66,7 @@ const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
         .y(d => d.x + offsetY)
       );
 
+    // Draw nodes (clusters and bacteria)
     const nodeGroup = svg.selectAll(".node")
       .data(root.descendants())
       .enter()
@@ -61,16 +74,19 @@ const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
       .attr("class", d => d.children ? "cluster-node" : "bacteria-node")
       .attr("transform", d => `translate(${margin.left + d.y},${d.x + offsetY})`);
 
+    // Circles for cluster nodes
     nodeGroup.filter(d => d.children)
       .append("circle")
       .attr("r", 8)
       .attr("fill", "#888");
 
+    // Circles for bacteria nodes
     nodeGroup.filter(d => !d.children)
       .append("circle")
       .attr("r", 5)
       .attr("fill", "#1f77b4");
 
+    // Node labels
     nodeGroup.append("text")
       .attr("dx", d => d.children ? -14 : 14)
       .attr("dy", "0.35em")
@@ -80,6 +96,7 @@ const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
       .style("fill", "white")
       .text(d => d.data.name);
 
+    // Column headers (phage names)
     svg.selectAll(".col-header")
       .data(filteredHeaders)
       .enter()
@@ -93,6 +110,7 @@ const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
       .style("fill", "white")
       .text(d => d);
 
+    // Draw matrix circles for each leaf node (bacteria) and phage value
     root.leaves().forEach((leaf) => {
       svg.selectAll(null)
         .data(filteredHeaders.map(h => {
@@ -111,6 +129,7 @@ const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
 
   }, [treeData, headers, visibleClusters, visiblePhages]);
 
+  // Save SVG as PNG
   const handleSave = () => {
     const svgElement = ref.current;
     const svgData = new XMLSerializer().serializeToString(svgElement);
@@ -124,7 +143,7 @@ const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
       canvas.height = svgElement.clientHeight;
       const ctx = canvas.getContext('2d');
 
-      ctx.fillStyle = '#1a202c';
+      ctx.fillStyle = '#1a202c';  // background color same as dark mode background
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
       URL.revokeObjectURL(url);
@@ -138,8 +157,8 @@ const TreeMatrix = ({ treeData, headers, visibleClusters, visiblePhages }) => {
     img.src = url;
   };
 
-  // Aggregate phage-cluster data for modal
-  const aggregatedData = aggregatePhageClusterInfo(treeData, headers);
+  // Aggregate phage-cluster data with leafOnly flag
+  const aggregatedData = aggregatePhageClusterInfo(treeData, headers, clusterTree, leafOnly);
 
   return (
     <div>
