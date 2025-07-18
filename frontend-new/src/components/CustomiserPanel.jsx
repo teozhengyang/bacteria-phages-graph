@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 
 const CustomiserPanel = ({
   headers,
-  clusters,           // array of { name, parent }
-  visibleClusters,    // array of cluster names (strings)
+  clusters,
+  visibleClusters,
   visiblePhages,
   setVisibleClusters,
   setVisiblePhages,
   bacteria,
-  bacteriaClusters,   // object { bacteriaName: clusterName }
+  bacteriaClusters,
   setBacteriaClusters,
-  addCluster,         // function(newClusterName, parentName|null)
-  deleteCluster,      // function(clusterName)
+  clusterBacteriaOrder,
+  setClusterBacteriaOrder,
+  addCluster,
+  deleteCluster,
 }) => {
   const [newClusterName, setNewClusterName] = useState('');
   const [parentCluster, setParentCluster] = useState('');
@@ -26,10 +28,23 @@ const CustomiserPanel = ({
   };
 
   const updateBacteriaCluster = (bacteriaName, clusterName) => {
-    setBacteriaClusters(prev => ({
-      ...prev,
-      [bacteriaName]: clusterName,
-    }));
+    setBacteriaClusters(prev => ({ ...prev, [bacteriaName]: clusterName }));
+    setClusterBacteriaOrder(prev => {
+      const updated = { ...prev };
+
+      const oldCluster = bacteriaClusters[bacteriaName];
+      if (oldCluster && updated[oldCluster]) {
+        updated[oldCluster] = updated[oldCluster].filter(b => b !== bacteriaName);
+      }
+
+      if (!updated[clusterName]) updated[clusterName] = [];
+      if (!updated[clusterName].includes(bacteriaName)) {
+        updated[clusterName].push(bacteriaName);
+      }
+
+      return updated;
+    });
+
     if (!visibleClusters.includes(clusterName)) {
       setVisibleClusters(prev => [...prev, clusterName]);
     }
@@ -40,32 +55,35 @@ const CustomiserPanel = ({
       alert('Cannot delete the Default cluster.');
       return;
     }
-    if (window.confirm(`Are you sure you want to delete the cluster "${clusterName}"? This will reassign any bacteria in it to "Default".`)) {
+    if (window.confirm(`Are you sure you want to delete "${clusterName}"?`)) {
       deleteCluster(clusterName);
     }
   };
+
+  // 🧠 Clusters that have at least one bacteria assigned
+  const clustersWithBacteria = clusters.filter(
+    c => (clusterBacteriaOrder[c.name] || []).length > 0
+  );
 
   return (
     <div className="space-y-4">
       <h2 className="font-bold text-md">Visible Clusters</h2>
       <div className="flex flex-wrap gap-2">
-        {clusters.map((c, i) => (
-          <label
-            key={`${c.name}-${i}`}
-            className="flex items-center gap-1 cursor-pointer bg-gray-700 rounded px-2 py-1"
-          >
+        {clusters.map(c => (
+          <label key={c.name} className="flex items-center gap-1 bg-gray-700 rounded px-2 py-1">
             <input
               type="checkbox"
               className="toggle toggle-sm"
               checked={visibleClusters.includes(c.name)}
-              onChange={() => {
+              onChange={() =>
                 setVisibleClusters(prev =>
-                  prev.includes(c.name) ? prev.filter(i => i !== c.name) : [...prev, c.name]
-                );
-              }}
+                  prev.includes(c.name)
+                    ? prev.filter(i => i !== c.name)
+                    : [...prev, c.name]
+                )
+              }
             />
-            <span className="select-none">{c.name}</span>
-            {/* Delete button */}
+            <span>{c.name}</span>
             {c.name !== 'Default' && (
               <button
                 onClick={e => {
@@ -73,8 +91,6 @@ const CustomiserPanel = ({
                   onDeleteCluster(c.name);
                 }}
                 className="btn btn-xs btn-error ml-1"
-                title={`Delete cluster ${c.name}`}
-                type="button"
               >
                 ×
               </button>
@@ -97,43 +113,84 @@ const CustomiserPanel = ({
           onChange={e => setParentCluster(e.target.value)}
         >
           <option value="">No Parent</option>
-          {clusters.map((c, i) => (
-            <option key={i} value={c.name}>{c.name}</option>
+          {clusters.map(c => (
+            <option key={c.name} value={c.name}>{c.name}</option>
           ))}
         </select>
         <button onClick={onAddCluster} className="btn btn-sm btn-primary">Add</button>
       </div>
 
-      <h2 className="font-bold text-md">Assign Bacteria to Clusters</h2>
+      <h2 className="font-bold text-md">Assign Bacteria</h2>
       <div className="max-h-64 overflow-auto border p-2 rounded">
-        {bacteria.map((b, i) => (
-          <div key={`${b}-${i}`} className="flex items-center gap-2 mb-1">
+        {bacteria.map(b => (
+          <div key={b} className="flex items-center gap-2 mb-1">
             <span className="flex-grow">{b}</span>
             <select
               className="select select-sm select-bordered"
               value={bacteriaClusters[b] || ''}
               onChange={e => updateBacteriaCluster(b, e.target.value)}
             >
-              {clusters.map((c, j) => (
-                <option key={`${c.name}-${j}`} value={c.name}>{c.name}</option>
+              {clustersWithBacteria.map(c => (
+                <option key={c.name} value={c.name}>{c.name}</option>
               ))}
+              {/* Allow assignment to clusters even if currently empty */}
+              {clusters
+                .filter(c => !clustersWithBacteria.includes(c))
+                .map(c => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
             </select>
           </div>
         ))}
       </div>
 
+      <h2 className="font-bold text-md mt-4">Bacteria Order in Clusters</h2>
+      <div className="max-h-64 overflow-auto border p-2 rounded space-y-4">
+        {clustersWithBacteria.map(c => {
+          const list = clusterBacteriaOrder[c.name] || [];
+          return (
+            <div key={c.name}>
+              <h3 className="font-semibold">{c.name}</h3>
+              {list.map((bact, idx) => (
+                <div key={bact} className="flex items-center gap-2">
+                  <span className="flex-grow">{bact}</span>
+                  <button
+                    disabled={idx === 0}
+                    onClick={() => {
+                      const newList = [...list];
+                      [newList[idx - 1], newList[idx]] = [newList[idx], newList[idx - 1]];
+                      setClusterBacteriaOrder(prev => ({ ...prev, [c.name]: newList }));
+                    }}
+                    className="btn btn-xs"
+                  >↑</button>
+                  <button
+                    disabled={idx === list.length - 1}
+                    onClick={() => {
+                      const newList = [...list];
+                      [newList[idx], newList[idx + 1]] = [newList[idx + 1], newList[idx]];
+                      setClusterBacteriaOrder(prev => ({ ...prev, [c.name]: newList }));
+                    }}
+                    className="btn btn-xs"
+                  >↓</button>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
       <h2 className="font-bold text-md">Visible Phages</h2>
       <div className="flex flex-wrap gap-2">
-        {headers.map((h, i) => (
-          <label key={`${h}-${i}`} className="flex items-center gap-1">
+        {headers.map(h => (
+          <label key={h} className="flex items-center gap-1">
             <input
               type="checkbox"
               checked={visiblePhages.includes(h)}
-              onChange={() => {
+              onChange={() =>
                 setVisiblePhages(prev =>
                   prev.includes(h) ? prev.filter(i => i !== h) : [...prev, h]
-                );
-              }}
+                )
+              }
               className="checkbox checkbox-sm"
             />
             {h}

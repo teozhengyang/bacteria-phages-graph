@@ -12,29 +12,39 @@ function App() {
   const [visibleClusters, setVisibleClusters] = useState(['Default']);
   const [visiblePhages, setVisiblePhages] = useState([]);
   const [bacteriaClusters, setBacteriaClusters] = useState({});
+  const [clusterBacteriaOrder, setClusterBacteriaOrder] = useState({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const buildTreeData = () => {
     if (!data) return null;
 
-    // 1. Create map of clusterName => clusterNode (with empty children)
     const clusterMap = {};
     allClusters.forEach(c => {
       clusterMap[c.name] = { name: c.name, parent: c.parent, children: [] };
     });
 
-    // 2. Assign bacteria nodes as children of their cluster
+    // Assign bacteria to their clusters
     Object.entries(bacteriaClusters).forEach(([bacteriaName, clusterName]) => {
       const key = clusterName || 'Default';
-      const clusterNode = clusterMap[key];
-      if (clusterNode) {
-        const bacteriaInfo = data.treeData.children[0].children.find(b => b.name === bacteriaName);
-        if (bacteriaInfo) clusterNode.children.push(bacteriaInfo);
+      if (!clusterMap[key]) return;
+      const bacteriaInfo = data.treeData.children[0].children.find(b => b.name === bacteriaName);
+      if (bacteriaInfo) {
+        if (!clusterMap[key].__bacteria) clusterMap[key].__bacteria = [];
+        clusterMap[key].__bacteria.push(bacteriaInfo);
       }
     });
 
-    // 3. Nest clusters inside their parent clusters
+    // Sort bacteria inside clusters based on order
+    Object.entries(clusterMap).forEach(([clusterName, clusterNode]) => {
+      const ordered = clusterBacteriaOrder[clusterName] || [];
+      const bacteriaInCluster = clusterNode.__bacteria || [];
+      const sorted = ordered.map(name => bacteriaInCluster.find(b => b.name === name)).filter(Boolean);
+      clusterNode.children = [...(clusterNode.children || []), ...sorted];
+      delete clusterNode.__bacteria;
+    });
+
+    // Nest child clusters
     const rootClusters = [];
     Object.values(clusterMap).forEach(clusterNode => {
       if (clusterNode.parent && clusterMap[clusterNode.parent]) {
@@ -44,31 +54,17 @@ function App() {
       }
     });
 
-    // 4. Recursively filter clusters by visibility
-    const filterVisibleClusters = (clusterNode) => {
-      if (!visibleClusters.includes(clusterNode.name)) return null;
-      const filteredChildren = (clusterNode.children || [])
-        .map(child => {
-          // Distinguish cluster nodes vs bacteria nodes by checking if they have 'parent'
-          if (child.parent !== undefined) {
-            // cluster node - recurse
-            return filterVisibleClusters(child);
-          }
-          // bacteria node - always include
-          return child;
-        })
+    const filterVisibleClusters = (node) => {
+      if (!visibleClusters.includes(node.name)) return null;
+      const filtered = (node.children || [])
+        .map(child => (child.parent !== undefined ? filterVisibleClusters(child) : child))
         .filter(Boolean);
-      return { ...clusterNode, children: filteredChildren };
+      return { ...node, children: filtered };
     };
 
-    const visibleRoots = rootClusters
-      .map(filterVisibleClusters)
-      .filter(Boolean);
+    const visibleRoots = rootClusters.map(filterVisibleClusters).filter(Boolean);
 
-    return {
-      name: 'Bacteria',
-      children: visibleRoots,
-    };
+    return { name: 'Bacteria', children: visibleRoots };
   };
 
   const treeData = buildTreeData();
@@ -76,14 +72,12 @@ function App() {
   const handleFile = async (file) => {
     const parsed = await parseExcelFile(file);
     setData(parsed);
-
-    // Initialize bacteriaClusters with all bacteria in Default cluster
     const initialClusters = {};
     parsed.treeData.children[0].children.forEach(b => {
       initialClusters[b.name] = 'Default';
     });
     setBacteriaClusters(initialClusters);
-
+    setClusterBacteriaOrder({ Default: parsed.treeData.children[0].children.map(b => b.name) });
     setAllClusters([{ name: 'Default', parent: null }]);
     setVisibleClusters(['Default']);
     setVisiblePhages(parsed.headers);
@@ -94,6 +88,7 @@ function App() {
     if (!allClusters.some(c => c.name === clusterName)) {
       setAllClusters(prev => [...prev, { name: clusterName, parent: parentName }]);
       setVisibleClusters(prev => [...prev, clusterName]);
+      setClusterBacteriaOrder(prev => ({ ...prev, [clusterName]: [] }));
       setHasUnsavedChanges(true);
     }
   };
@@ -104,7 +99,6 @@ function App() {
       return;
     }
 
-    // Collect all clusters to remove: clusterName + all descendants recursively
     const clustersToRemove = new Set();
     const collectDescendants = (name) => {
       clustersToRemove.add(name);
@@ -114,7 +108,6 @@ function App() {
     };
     collectDescendants(clusterName);
 
-    // Reassign bacteria assigned to any removed cluster back to 'Default'
     setBacteriaClusters(prev => {
       const updated = {};
       for (const [bacteria, cluster] of Object.entries(prev)) {
@@ -123,15 +116,18 @@ function App() {
       return updated;
     });
 
-    // Remove clusters and descendants from allClusters
+    setClusterBacteriaOrder(prev => {
+      const updated = { ...prev };
+      for (const name of clustersToRemove) {
+        delete updated[name];
+      }
+      return updated;
+    });
+
     setAllClusters(prev => prev.filter(c => !clustersToRemove.has(c.name)));
-
-    // Remove clusters and descendants from visibleClusters
     setVisibleClusters(prev => prev.filter(c => !clustersToRemove.has(c)));
-
     setHasUnsavedChanges(true);
   };
-
 
   useEffect(() => {
     if (data) setHasUnsavedChanges(true);
@@ -142,21 +138,12 @@ function App() {
       if (!hasUnsavedChanges) return;
       e.preventDefault();
       e.returnValue = '';
-      toast.warning('You have unsaved changes! Reloading or leaving will lose your work.', {
-        position: "top-right",
-        autoClose: 5000,
-        pauseOnHover: true,
-        draggable: true,
+      toast.warning('You have unsaved changes!', {
+        position: "top-right", autoClose: 5000, pauseOnHover: true, draggable: true,
       });
-      return '';
     };
 
-    if (hasUnsavedChanges) {
-      window.addEventListener('beforeunload', handleBeforeUnload);
-    } else {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    }
-
+    window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
@@ -169,7 +156,6 @@ function App() {
           <button
             onClick={() => setShowSidebar(false)}
             className="absolute top-2 right-2 btn btn-sm btn-outline"
-            aria-label="Hide sidebar"
           >
             ×
           </button>
@@ -184,6 +170,8 @@ function App() {
             setVisiblePhages={setVisiblePhages}
             bacteriaClusters={bacteriaClusters}
             setBacteriaClusters={setBacteriaClusters}
+            clusterBacteriaOrder={clusterBacteriaOrder}
+            setClusterBacteriaOrder={setClusterBacteriaOrder}
             addCluster={addCluster}
             deleteCluster={deleteCluster}
           />
@@ -192,10 +180,8 @@ function App() {
 
       {!showSidebar && (
         <div
-          className="absolute top-1/2 left-0 z-10 -translate-y-1/2 bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded-r cursor-pointer transition-all"
+          className="absolute top-1/2 left-0 z-10 -translate-y-1/2 bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded-r cursor-pointer"
           onClick={() => setShowSidebar(true)}
-          title="Show Panel"
-          style={{ userSelect: 'none' }}
         >
           ▶
         </div>
