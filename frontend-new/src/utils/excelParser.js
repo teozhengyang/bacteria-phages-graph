@@ -19,7 +19,7 @@ export async function parseExcelFile(file) {
       name: 'Bacteria',
       children: [
         {
-          name: 'Default',
+          name: 'Root',
           children: bacteriaData
         }
       ]

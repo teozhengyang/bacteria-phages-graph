@@ -2,19 +2,24 @@ import React, { useState, useEffect } from 'react';
 import FileUploader from './components/FileUploader';
 import TreeMatrix from './components/TreeMatrix';
 import CustomiserPanel from './components/CustomiserPanel';
+import PhageClusterInfoModal from './components/PhageClusterInfoModal';
 import { parseExcelFile } from './utils/excelParser';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { aggregatePhageClusterInfo } from './utils/aggregatePhageClusterInfo';
 
 function App() {
   const [data, setData] = useState(null);
-  const [allClusters, setAllClusters] = useState([{ name: 'Default', parent: null }]);
-  const [visibleClusters, setVisibleClusters] = useState(['Default']);
-  const [visiblePhages, setVisiblePhages] = useState([]);
+  const [allClusters, setAllClusters] = useState([{ name: 'Root', parent: null }]);
+  const [visibleClusters, setVisibleClusters] = useState(['Root']);
+  const [visiblePhages, setVisiblePhages] = useState([]); // Just phages visible
   const [bacteriaClusters, setBacteriaClusters] = useState({});
   const [clusterBacteriaOrder, setClusterBacteriaOrder] = useState({});
+
   const [showSidebar, setShowSidebar] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedClusters, setSelectedClusters] = useState([]);
+  const [selectedPhages, setSelectedPhages] = useState([]);
 
   const buildTreeData = () => {
     if (!data) return null;
@@ -24,9 +29,8 @@ function App() {
       clusterMap[c.name] = { name: c.name, parent: c.parent, children: [] };
     });
 
-    // Assign bacteria to their clusters
     Object.entries(bacteriaClusters).forEach(([bacteriaName, clusterName]) => {
-      const key = clusterName || 'Default';
+      const key = clusterName || 'Root';
       if (!clusterMap[key]) return;
       const bacteriaInfo = data.treeData.children[0].children.find(b => b.name === bacteriaName);
       if (bacteriaInfo) {
@@ -35,7 +39,6 @@ function App() {
       }
     });
 
-    // Sort bacteria inside clusters based on order
     Object.entries(clusterMap).forEach(([clusterName, clusterNode]) => {
       const ordered = clusterBacteriaOrder[clusterName] || [];
       const bacteriaInCluster = clusterNode.__bacteria || [];
@@ -44,7 +47,6 @@ function App() {
       delete clusterNode.__bacteria;
     });
 
-    // Nest child clusters
     const rootClusters = [];
     Object.values(clusterMap).forEach(clusterNode => {
       if (clusterNode.parent && clusterMap[clusterNode.parent]) {
@@ -72,15 +74,24 @@ function App() {
   const handleFile = async (file) => {
     const parsed = await parseExcelFile(file);
     setData(parsed);
+
+    // Default bacteria cluster assignment
     const initialClusters = {};
     parsed.treeData.children[0].children.forEach(b => {
-      initialClusters[b.name] = 'Default';
+      initialClusters[b.name] = 'Root';
     });
     setBacteriaClusters(initialClusters);
-    setClusterBacteriaOrder({ Default: parsed.treeData.children[0].children.map(b => b.name) });
-    setAllClusters([{ name: 'Default', parent: null }]);
-    setVisibleClusters(['Default']);
+
+    setClusterBacteriaOrder({ Root: parsed.treeData.children[0].children.map(b => b.name) });
+
+    setAllClusters([{ name: 'Root', parent: null }]);
+    setVisibleClusters(['Root']);
+
+    // Initialize visible phages to all headers
     setVisiblePhages(parsed.headers);
+
+    setSelectedClusters([]);
+    setSelectedPhages([]);
     setHasUnsavedChanges(false);
   };
 
@@ -94,8 +105,8 @@ function App() {
   };
 
   const deleteCluster = (clusterName) => {
-    if (clusterName === 'Default') {
-      alert('Cannot delete the Default cluster.');
+    if (clusterName === 'Root') {
+      alert('Cannot delete the Root cluster.');
       return;
     }
 
@@ -111,7 +122,7 @@ function App() {
     setBacteriaClusters(prev => {
       const updated = {};
       for (const [bacteria, cluster] of Object.entries(prev)) {
-        updated[bacteria] = clustersToRemove.has(cluster) ? 'Default' : cluster;
+        updated[bacteria] = clustersToRemove.has(cluster) ? 'Root' : cluster;
       }
       return updated;
     });
@@ -138,16 +149,14 @@ function App() {
       if (!hasUnsavedChanges) return;
       e.preventDefault();
       e.returnValue = '';
-      toast.warning('You have unsaved changes!', {
-        position: "top-right", autoClose: 5000, pauseOnHover: true, draggable: true,
-      });
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
   if (!data) return <FileUploader onFile={handleFile} />;
+
+  const clusterInfoData = aggregatePhageClusterInfo(treeData, data.headers);
 
   return (
     <div className="flex h-screen relative bg-base-100 text-white">
@@ -175,6 +184,12 @@ function App() {
             addCluster={addCluster}
             deleteCluster={deleteCluster}
           />
+
+          <div className="mt-4">
+            <button className="btn btn-sm btn-primary w-full" onClick={() => setIsModalOpen(true)}>
+              Show Phage Info
+            </button>
+          </div>
         </div>
       )}
 
@@ -193,10 +208,19 @@ function App() {
           headers={data.headers}
           visibleClusters={visibleClusters}
           visiblePhages={visiblePhages}
+          bacteriaClusterOrderArr={Object.keys(clusterBacteriaOrder)}
         />
       </div>
 
-      <ToastContainer />
+      <PhageClusterInfoModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        data={clusterInfoData}
+        selectedClusters={selectedClusters}
+        setSelectedClusters={setSelectedClusters}
+        selectedPhages={selectedPhages}
+        setSelectedPhages={setSelectedPhages}
+      />
     </div>
   );
 }

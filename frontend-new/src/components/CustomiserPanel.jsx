@@ -51,8 +51,8 @@ const CustomiserPanel = ({
   };
 
   const onDeleteCluster = (clusterName) => {
-    if (clusterName === 'Default') {
-      alert('Cannot delete the Default cluster.');
+    if (clusterName === 'Root') {
+      alert('Cannot delete the Root cluster.');
       return;
     }
     if (window.confirm(`Are you sure you want to delete "${clusterName}"?`)) {
@@ -60,17 +60,25 @@ const CustomiserPanel = ({
     }
   };
 
-  // 🧠 Clusters that have at least one bacteria assigned
+  // Clusters that have at least one bacteria assigned
   const clustersWithBacteria = clusters.filter(
     c => (clusterBacteriaOrder[c.name] || []).length > 0
   );
+
+  const togglePhage = (phage) => {
+    if (visiblePhages.includes(phage)) {
+      setVisiblePhages(prev => prev.filter(p => p !== phage));
+    } else {
+      setVisiblePhages(prev => [...prev, phage]);
+    }
+  };
 
   return (
     <div className="space-y-4">
       <h2 className="font-bold text-md">Visible Clusters</h2>
       <div className="flex flex-wrap gap-2">
         {clusters.map(c => (
-          <label key={c.name} className="flex items-center gap-1 bg-gray-700 rounded px-2 py-1">
+          <label key={c.name} className="flex items-center gap-1 rounded px-2 py-1">
             <input
               type="checkbox"
               className="toggle toggle-sm"
@@ -84,7 +92,7 @@ const CustomiserPanel = ({
               }
             />
             <span>{c.name}</span>
-            {c.name !== 'Default' && (
+            {c.name !== 'Root' && (
               <button
                 onClick={e => {
                   e.stopPropagation();
@@ -106,6 +114,9 @@ const CustomiserPanel = ({
           value={newClusterName}
           onChange={e => setNewClusterName(e.target.value)}
           className="input input-sm input-bordered flex-grow"
+          onKeyDown={e => {
+            if (e.key === 'Enter') onAddCluster();
+          }}
         />
         <select
           className="select select-sm select-bordered"
@@ -133,7 +144,6 @@ const CustomiserPanel = ({
               {clustersWithBacteria.map(c => (
                 <option key={c.name} value={c.name}>{c.name}</option>
               ))}
-              {/* Allow assignment to clusters even if currently empty */}
               {clusters
                 .filter(c => !clustersWithBacteria.includes(c))
                 .map(c => (
@@ -179,21 +189,17 @@ const CustomiserPanel = ({
         })}
       </div>
 
-      <h2 className="font-bold text-md">Visible Phages</h2>
-      <div className="flex flex-wrap gap-2">
-        {headers.map(h => (
-          <label key={h} className="flex items-center gap-1">
+      <h2 className="font-bold text-md mt-4">Visible Phages</h2>
+      <div className="max-h-64 overflow-auto border p-2 rounded">
+        {headers.map(phage => (
+          <label key={phage} className="flex items-center gap-2 mb-1 cursor-pointer">
             <input
               type="checkbox"
-              checked={visiblePhages.includes(h)}
-              onChange={() =>
-                setVisiblePhages(prev =>
-                  prev.includes(h) ? prev.filter(i => i !== h) : [...prev, h]
-                )
-              }
-              className="checkbox checkbox-sm"
+              className="checkbox"
+              checked={visiblePhages.includes(phage)}
+              onChange={() => togglePhage(phage)}
             />
-            {h}
+            <span>{phage}</span>
           </label>
         ))}
       </div>
