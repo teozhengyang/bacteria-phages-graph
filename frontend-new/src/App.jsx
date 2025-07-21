@@ -10,16 +10,41 @@ function App() {
   const [data, setData] = useState(null);
   const [allClusters, setAllClusters] = useState([{ name: 'Root', parent: null }]);
   const [visibleClusters, setVisibleClusters] = useState(['Root']);
-  const [visiblePhages, setVisiblePhages] = useState([]); // Just phages visible
+  const [visiblePhages, setVisiblePhages] = useState([]);
   const [bacteriaClusters, setBacteriaClusters] = useState({});
   const [clusterBacteriaOrder, setClusterBacteriaOrder] = useState({});
-
   const [showSidebar, setShowSidebar] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClusters, setSelectedClusters] = useState([]);
-  const [selectedPhages, setSelectedPhages] = useState([]);
+  const [selectedPhages, setSelectedPhages] = useState([])
+  const [originalFileName, setOriginalFileName] = useState('');
+;
+
+  const [sidebarWidth, setSidebarWidth] = useState('320px');
+  const [resizing, setResizing] = useState(false);
+
+  const startResizing = (e) => {
+    e.preventDefault();
+    setResizing(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!resizing) return;
+      const newWidth = Math.min(Math.max(e.clientX, 200), 600);
+      setSidebarWidth(`${newWidth}px`);
+    };
+
+    const handleMouseUp = () => setResizing(false);
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizing]);
 
   const buildTreeData = () => {
     if (!data) return null;
@@ -29,10 +54,12 @@ function App() {
       clusterMap[c.name] = { name: c.name, parent: c.parent, children: [] };
     });
 
+    const allBacteria = data.treeData?.children?.[0]?.children || [];
+
     Object.entries(bacteriaClusters).forEach(([bacteriaName, clusterName]) => {
       const key = clusterName || 'Root';
       if (!clusterMap[key]) return;
-      const bacteriaInfo = data.treeData.children[0].children.find(b => b.name === bacteriaName);
+      const bacteriaInfo = allBacteria.find(b => b.name === bacteriaName);
       if (bacteriaInfo) {
         if (!clusterMap[key].__bacteria) clusterMap[key].__bacteria = [];
         clusterMap[key].__bacteria.push(bacteriaInfo);
@@ -42,7 +69,9 @@ function App() {
     Object.entries(clusterMap).forEach(([clusterName, clusterNode]) => {
       const ordered = clusterBacteriaOrder[clusterName] || [];
       const bacteriaInCluster = clusterNode.__bacteria || [];
-      const sorted = ordered.map(name => bacteriaInCluster.find(b => b.name === name)).filter(Boolean);
+      const sorted = ordered
+        .map(name => bacteriaInCluster.find(b => b?.name === name))
+        .filter(Boolean);
       clusterNode.children = [...(clusterNode.children || []), ...sorted];
       delete clusterNode.__bacteria;
     });
@@ -65,7 +94,6 @@ function App() {
     };
 
     const visibleRoots = rootClusters.map(filterVisibleClusters).filter(Boolean);
-
     return { name: 'Bacteria', children: visibleRoots };
   };
 
@@ -75,7 +103,10 @@ function App() {
     const parsed = await parseExcelFile(file);
     setData(parsed);
 
-    // Default bacteria cluster assignment
+    // Store file name without extension
+    const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+    setOriginalFileName(nameWithoutExt);
+
     const initialClusters = {};
     parsed.treeData.children[0].children.forEach(b => {
       initialClusters[b.name] = 'Root';
@@ -86,13 +117,60 @@ function App() {
 
     setAllClusters([{ name: 'Root', parent: null }]);
     setVisibleClusters(['Root']);
-
-    // Initialize visible phages to all headers
     setVisiblePhages(parsed.headers);
-
     setSelectedClusters([]);
     setSelectedPhages([]);
     setHasUnsavedChanges(false);
+  };
+
+
+  const importSession = async (file) => {
+    try {
+      const text = await file.text();
+      const session = JSON.parse(text);
+      if (
+        session.allClusters &&
+        session.visibleClusters &&
+        session.visiblePhages &&
+        session.bacteriaClusters &&
+        session.clusterBacteriaOrder
+      ) {
+        setAllClusters(session.allClusters);
+        setVisibleClusters(session.visibleClusters);
+        setVisiblePhages(session.visiblePhages);
+        setBacteriaClusters(session.bacteriaClusters);
+        setClusterBacteriaOrder(session.clusterBacteriaOrder);
+        setHasUnsavedChanges(false);
+        alert('Session imported successfully.');
+      } else {
+        alert('Invalid session file.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to import session.');
+    }
+  };
+
+  const exportSession = () => {
+    const session = {
+      allClusters,
+      visibleClusters,
+      visiblePhages,
+      bacteriaClusters,
+      clusterBacteriaOrder,
+    };
+
+    const blob = new Blob([JSON.stringify(session, null, 2)], {
+      type: 'application/json',
+    });
+
+    const fileName = originalFileName ? `${originalFileName}-session.json` : 'session.json';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const addCluster = (clusterName, parentName = null) => {
@@ -161,35 +239,48 @@ function App() {
   return (
     <div className="flex h-screen relative bg-base-100 text-white">
       {showSidebar && (
-        <div className="w-80 p-4 overflow-y-auto bg-base-200 h-full z-20 relative">
-          <button
-            onClick={() => setShowSidebar(false)}
-            className="absolute top-2 right-2 btn btn-sm btn-outline"
+        <div className="flex h-full">
+          <div
+            className="bg-base-200 h-full z-20 relative p-4 overflow-y-auto"
+            style={{ width: sidebarWidth }}
           >
-            ×
-          </button>
-
-          <CustomiserPanel
-            headers={data.headers}
-            clusters={allClusters}
-            bacteria={data.treeData.children[0].children.map(b => b.name)}
-            visibleClusters={visibleClusters}
-            visiblePhages={visiblePhages}
-            setVisibleClusters={setVisibleClusters}
-            setVisiblePhages={setVisiblePhages}
-            bacteriaClusters={bacteriaClusters}
-            setBacteriaClusters={setBacteriaClusters}
-            clusterBacteriaOrder={clusterBacteriaOrder}
-            setClusterBacteriaOrder={setClusterBacteriaOrder}
-            addCluster={addCluster}
-            deleteCluster={deleteCluster}
-          />
-
-          <div className="mt-4">
-            <button className="btn btn-sm btn-primary w-full" onClick={() => setIsModalOpen(true)}>
-              Show Phage Info
+            <button
+              onClick={() => setShowSidebar(false)}
+              className="absolute top-2 right-2 btn btn-sm btn-outline"
+            >
+              ×
             </button>
+
+            <CustomiserPanel
+              headers={data.headers}
+              clusters={allClusters}
+              bacteria={data.treeData.children[0].children.map(b => b.name)}
+              visibleClusters={visibleClusters}
+              visiblePhages={visiblePhages}
+              setVisibleClusters={setVisibleClusters}
+              setVisiblePhages={setVisiblePhages}
+              bacteriaClusters={bacteriaClusters}
+              setBacteriaClusters={setBacteriaClusters}
+              clusterBacteriaOrder={clusterBacteriaOrder}
+              setClusterBacteriaOrder={setClusterBacteriaOrder}
+              addCluster={addCluster}
+              deleteCluster={deleteCluster}
+              exportSession={exportSession}
+              importSession={importSession}
+            />
+
+            <div className="mt-4">
+              <button className="btn btn-sm btn-primary w-full text-base" onClick={() => setIsModalOpen(true)}>
+                Show Phage Info
+              </button>
+            </div>
           </div>
+
+          {/* Resizer */}
+          <div
+            onMouseDown={startResizing}
+            className="cursor-col-resize w-2 bg-gray-700 hover:bg-gray-600"
+          />
         </div>
       )}
 

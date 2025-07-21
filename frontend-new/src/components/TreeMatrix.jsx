@@ -19,37 +19,36 @@ const TreeMatrix = ({
     const svg = d3.select(ref.current);
     svg.selectAll('*').remove();
 
-    // Layout constants
-    const margin = { top: 150, right: 40, bottom: 40, left: 90 };
+    const margin = { top: 150, right: 40, bottom: 40, left: 20 };
     const cellSize = 50;
-    const clusterWidth = 100;      // Horizontal position for bacteria and child clusters
-    const verticalSpacing = 40;    // Vertical spacing between nodes
+    const clusterWidth = 100;
+    const verticalSpacing = 40;
 
     const offsetX = margin.left;
     const offsetY = margin.top - 40;
-    const clusterLabelOffsetX = -14; // cluster label text offset (left)
-    const bacteriaLabelOffsetX = 14; // bacteria label text offset (right)
+    const clusterLabelOffsetX = -15;
+    const bacteriaLabelOffsetX = -12;
 
-    // Filter clusters by visibility & preserve order
-    const filteredClusters = treeData.children
-      .filter(c => visibleClusters.includes(c.name))
-      .sort((a, b) => {
-        const iA = bacteriaClusterOrderArr.indexOf(a.name);
-        const iB = bacteriaClusterOrderArr.indexOf(b.name);
-        return iA - iB;
-      });
-    const filteredTreeData = { ...treeData, children: filteredClusters };
+    // --- Mark clusters as visible/invisible without pruning ---
+    function markClusterVisibility(node, visibleSet) {
+      const isVisible = visibleSet.has(node.name);
+      const markedNode = { 
+        ...node, 
+        _visible: isVisible,
+        children: node.children ? node.children.map(child => markClusterVisibility(child, visibleSet)) : undefined
+      };
+      return markedNode;
+    }
 
-    // Build d3 hierarchy
-    const root = d3.hierarchy(filteredTreeData);
+    const visibleSet = new Set(visibleClusters);
+    const markedTreeData = markClusterVisibility(treeData, visibleSet);
+    const root = d3.hierarchy(markedTreeData);
 
-    // Helper: get immediate bacteria children (leaves)
     function getDirectBacteriaNodes(clusterNode) {
       if (!clusterNode.children) return [];
       return clusterNode.children.filter(child => !child.children);
     }
 
-    // Compute vertical height needed for subtree recursively
     function computeHeight(node) {
       if (!node.children) return verticalSpacing;
 
@@ -69,7 +68,6 @@ const TreeMatrix = ({
 
     computeHeight(root);
 
-    // Assign positions
     function assignPositions(node, startY, currentX = 0) {
       if (!node.children) {
         node.x = currentX;
@@ -104,21 +102,19 @@ const TreeMatrix = ({
       return totalHeight;
     }
 
-    assignPositions(root, 0, 0);
+    assignPositions(root, 0, -clusterWidth / 2);
 
-    // Compute SVG dimensions
     const maxY = d3.max(root.descendants().map(d => d.y));
     const maxX = d3.max(root.descendants().map(d => d.x));
     const height = maxY + margin.top + margin.bottom + 50;
 
-    // Use visiblePhages for columns
     const clusteredPhageColumns = visiblePhages.map(phage => ({
       name: phage,
       phages: [phage],
     }));
 
     const matrixWidth = clusteredPhageColumns.length * cellSize;
-    const xStart = margin.left + maxX + 50;
+    const xStart = margin.left + maxX + 20;
     const svgWidth = xStart + matrixWidth + margin.right;
 
     const xScale = d3.scaleBand()
@@ -128,17 +124,18 @@ const TreeMatrix = ({
 
     svg.attr("width", svgWidth).attr("height", height);
 
-    // Draw links from cluster to bacteria and child clusters
+    // Draw links: cluster -> bacteria and cluster -> child clusters
     root.descendants().forEach(node => {
-      if (!node.children) return;
+      if (!node.children || !node.data._visible) return; // Only draw links from visible clusters
 
       const bacteria = getDirectBacteriaNodes(node);
+      
       bacteria.forEach(bact => {
         svg.append("path")
           .attr("class", "link")
           .attr("fill", "none")
-          .attr("stroke", "#999")
-          .attr("stroke-width", 1.5)
+          .attr("stroke", "#718096")
+          .attr("stroke-width", 2)
           .attr("d", () => {
             const startX = offsetX + node.x;
             const startY = offsetY + node.y;
@@ -152,8 +149,8 @@ const TreeMatrix = ({
         svg.append("path")
           .attr("class", "link")
           .attr("fill", "none")
-          .attr("stroke", "#999")
-          .attr("stroke-width", 1.5)
+          .attr("stroke", "#718096")
+          .attr("stroke-width", 2)
           .attr("d", () => {
             const startX = offsetX + node.x;
             const startY = offsetY + node.y;
@@ -164,7 +161,7 @@ const TreeMatrix = ({
       });
     });
 
-    // Draw cluster nodes (circle + label)
+    // Draw clusters
     const clusterNodes = root.descendants().filter(d => d.children);
     const clusterGroup = svg.selectAll(".cluster-node")
       .data(clusterNodes)
@@ -173,20 +170,25 @@ const TreeMatrix = ({
       .attr("class", "cluster-node")
       .attr("transform", d => `translate(${offsetX + d.x},${offsetY + d.y})`);
 
+    // Only show cluster circle and label if visible
     clusterGroup.append("circle")
-      .attr("r", 8)
-      .attr("fill", "#888");
+      .attr("r", 10)
+      .attr("fill", "#4a5568")
+      .attr("stroke", "#718096")
+      .attr("stroke-width", 2)
+      .style("opacity", d => d.data._visible ? 1 : 0); // Hide circle if not visible
 
     clusterGroup.append("text")
       .attr("dx", clusterLabelOffsetX)
       .attr("dy", "0.35em")
       .style("text-anchor", "end")
-      .style("font-size", "18px")
-      .style("font-weight", "600")
+      .style("font-size", "20px")
+      .style("font-weight", "700")
       .style("fill", "white")
+      .style("opacity", d => d.data._visible ? 1 : 0) // Hide text if not visible
       .text(d => d.data.name);
 
-    // Draw bacteria nodes (circle + label)
+    // Draw bacteria
     const bacteriaNodes = root.leaves();
     const bactGroup = svg.selectAll(".bacteria-node")
       .data(bacteriaNodes)
@@ -196,19 +198,25 @@ const TreeMatrix = ({
       .attr("transform", d => `translate(${offsetX + d.x},${offsetY + d.y})`);
 
     bactGroup.append("circle")
-      .attr("r", 5)
-      .attr("fill", "#1f77b4");
+      .attr("r", 7)
+      .attr("fill", "#2d3748")
+      .attr("stroke", "#4a5568")
+      .attr("stroke-width", 1);
+
+    bactGroup.append("circle")
+      .attr("r", 4)
+      .attr("fill", "#3182ce");
 
     bactGroup.append("text")
       .attr("dx", bacteriaLabelOffsetX)
       .attr("dy", "0.35em")
-      .style("text-anchor", "start")
+      .style("text-anchor", "end")
       .style("font-size", "16px")
       .style("font-weight", "600")
       .style("fill", "white")
       .text(d => d.data.name);
 
-    // Column headers (rotated)
+    // Phage column headers
     svg.selectAll(".col-header")
       .data(clusteredPhageColumns)
       .enter()
@@ -221,11 +229,12 @@ const TreeMatrix = ({
         `rotate(-45, ${xStart + xScale(i) + cellSize / 2}, ${margin.top - 80})`
       )
       .style("font-weight", "700")
-      .style("font-size", "14px")
+      .style("font-size", "18px")
       .style("fill", "white")
+      .style("user-select", "none")
       .text(d => d.name);
 
-    // Draw matrix cells with conditional fill
+    // Phage-bacteria circles matrix
     root.leaves().forEach((leaf) => {
       svg.selectAll(null)
         .data(clusteredPhageColumns.map((group) => {
@@ -238,9 +247,10 @@ const TreeMatrix = ({
         .attr("data-name", leaf.data.name)
         .attr("cx", (_, i) => xStart + xScale(i) + cellSize / 2)
         .attr("cy", leaf.y + offsetY)
-        .attr("r", 10)
-        .attr("fill", d => d ? "lightgreen" : "white")
-        .attr("stroke", "black");
+        .attr("r", 8)
+        .attr("fill", d => d ? "#48bb78" : "#2d3748")
+        .attr("stroke", d => d ? "#68d391" : "#4a5568")
+        .attr("stroke-width", 1);
     });
 
   }, [
@@ -287,13 +297,6 @@ const TreeMatrix = ({
           className="px-4 py-1 rounded bg-green-600 hover:bg-green-700 text-white"
         >
           Save as PNG
-        </button>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
-          title="Show Phage Cluster Info"
-        >
-          Phage Info
         </button>
       </div>
 

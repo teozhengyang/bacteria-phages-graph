@@ -14,9 +14,13 @@ const CustomiserPanel = ({
   setClusterBacteriaOrder,
   addCluster,
   deleteCluster,
+  importSession, 
+  exportSession,
 }) => {
   const [newClusterName, setNewClusterName] = useState('');
   const [parentCluster, setParentCluster] = useState('');
+
+  
 
   const onAddCluster = () => {
     const trimmed = newClusterName.trim();
@@ -62,8 +66,11 @@ const CustomiserPanel = ({
 
   // Clusters that have at least one bacteria assigned
   const clustersWithBacteria = clusters.filter(
-    c => (clusterBacteriaOrder[c.name] || []).length > 0
+    c => (clusterBacteriaOrder[c.name] || []).filter(b => b != null && b !== '').length > 0
   );
+
+  // Filter bacteria to avoid undefined or empty strings, to fix keys
+  const filteredBacteria = bacteria.filter(b => b != null && b !== '');
 
   const togglePhage = (phage) => {
     if (visiblePhages.includes(phage)) {
@@ -78,7 +85,7 @@ const CustomiserPanel = ({
       <h2 className="font-bold text-md">Visible Clusters</h2>
       <div className="flex flex-wrap gap-2">
         {clusters.map(c => (
-          <label key={c.name} className="flex items-center gap-1 rounded px-2 py-1">
+          <label key={`cluster-${c.name}`} className="flex items-center gap-1 rounded px-2 py-1">
             <input
               type="checkbox"
               className="toggle toggle-sm"
@@ -125,7 +132,7 @@ const CustomiserPanel = ({
         >
           <option value="">No Parent</option>
           {clusters.map(c => (
-            <option key={c.name} value={c.name}>{c.name}</option>
+            <option key={`parent-${c.name}`} value={c.name}>{c.name}</option>
           ))}
         </select>
         <button onClick={onAddCluster} className="btn btn-sm btn-primary">Add</button>
@@ -133,8 +140,8 @@ const CustomiserPanel = ({
 
       <h2 className="font-bold text-md">Assign Bacteria</h2>
       <div className="max-h-64 overflow-auto border p-2 rounded">
-        {bacteria.map(b => (
-          <div key={b} className="flex items-center gap-2 mb-1">
+        {filteredBacteria.map(b => (
+          <div key={`bact-${b}`} className="flex items-center gap-2 mb-1">
             <span className="flex-grow">{b}</span>
             <select
               className="select select-sm select-bordered"
@@ -142,12 +149,12 @@ const CustomiserPanel = ({
               onChange={e => updateBacteriaCluster(b, e.target.value)}
             >
               {clustersWithBacteria.map(c => (
-                <option key={c.name} value={c.name}>{c.name}</option>
+                <option key={`opt1-${b}-${c.name}`} value={c.name}>{c.name}</option>
               ))}
               {clusters
                 .filter(c => !clustersWithBacteria.includes(c))
                 .map(c => (
-                  <option key={c.name} value={c.name}>{c.name}</option>
+                  <option key={`opt2-${b}-${c.name}`} value={c.name}>{c.name}</option>
                 ))}
             </select>
           </div>
@@ -157,12 +164,12 @@ const CustomiserPanel = ({
       <h2 className="font-bold text-md mt-4">Bacteria Order in Clusters</h2>
       <div className="max-h-64 overflow-auto border p-2 rounded space-y-4">
         {clustersWithBacteria.map(c => {
-          const list = clusterBacteriaOrder[c.name] || [];
+          const list = (clusterBacteriaOrder[c.name] || []).filter(b => b != null && b !== '');
           return (
             <div key={c.name}>
               <h3 className="font-semibold">{c.name}</h3>
               {list.map((bact, idx) => (
-                <div key={bact} className="flex items-center gap-2">
+                <div key={`order-${c.name}-${bact}`} className="flex items-center gap-2">
                   <span className="flex-grow">{bact}</span>
                   <button
                     disabled={idx === 0}
@@ -192,7 +199,7 @@ const CustomiserPanel = ({
       <h2 className="font-bold text-md mt-4">Visible Phages</h2>
       <div className="max-h-64 overflow-auto border p-2 rounded">
         {headers.map(phage => (
-          <label key={phage} className="flex items-center gap-2 mb-1 cursor-pointer">
+          <label key={`phage-${phage}`} className="flex items-center gap-2 mb-1 cursor-pointer">
             <input
               type="checkbox"
               className="checkbox"
@@ -202,6 +209,32 @@ const CustomiserPanel = ({
             <span>{phage}</span>
           </label>
         ))}
+      </div>
+
+      <h2 className="font-bold text-md mt-4">Session Management</h2>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={exportSession}
+          className="btn btn-sm btn-success w-full text-base"
+        >
+          📤 Export Session
+        </button>
+        
+        <label className="btn btn-sm btn-info w-full text-base">
+          📥 Import Session
+          <input
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files[0];
+              if (file) {
+                importSession(file);
+                e.target.value = '';
+              }
+            }}
+          />
+        </label>
       </div>
     </div>
   );
