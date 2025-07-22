@@ -24,6 +24,8 @@ function App() {
   const [sidebarWidth, setSidebarWidth] = useState('320px');
   const [resizing, setResizing] = useState(false);
 
+   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
   const startResizing = (e) => {
     e.preventDefault();
     setResizing(true);
@@ -40,11 +42,17 @@ function App() {
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizing]);
+  }, [resizing, theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  };
 
   const buildTreeData = () => {
     if (!data) return null;
@@ -232,7 +240,8 @@ function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  if (!data) return <FileUploader onFile={handleFile} />;
+if (!data)
+    return <FileUploader onFile={handleFile} theme={theme} toggleTheme={toggleTheme} />;
 
   const clusterInfoData = aggregatePhageClusterInfo(treeData, data.headers);
 
@@ -244,13 +253,24 @@ function App() {
             className="bg-base-200 h-full z-20 relative p-4 overflow-y-auto"
             style={{ width: sidebarWidth }}
           >
-            <button
-              onClick={() => setShowSidebar(false)}
-              className="absolute top-2 right-2 btn btn-sm btn-outline"
-            >
-              ×
-            </button>
+            <div className="absolute top-2 right-2 flex items-center gap-2">
+              {/* 🌗 Theme Toggle Button */}
+              <button
+                onClick={toggleTheme}
+                className={`btn btn-sm ${theme === 'light' ? 'btn-neutral' : 'btn-outline'}`}
+                title="Toggle theme"
+              >
+                {theme === 'light' ? '🌙' : '☀️'}
+              </button>
 
+              <button
+                onClick={() => setShowSidebar(false)}
+                className={`btn btn-sm ${theme === 'light' ? 'btn-neutral' : 'btn-outline'}`}
+                title="Close panel"
+              >
+                ×
+              </button>
+          </div>
             <CustomiserPanel
               headers={data.headers}
               clusters={allClusters}
@@ -276,7 +296,6 @@ function App() {
             </div>
           </div>
 
-          {/* Resizer */}
           <div
             onMouseDown={startResizing}
             className="cursor-col-resize w-2 bg-gray-700 hover:bg-gray-600"
@@ -295,6 +314,7 @@ function App() {
 
       <div className="flex-1 overflow-auto">
         <TreeMatrix
+          theme={theme}
           treeData={treeData}
           headers={data.headers}
           visibleClusters={visibleClusters}

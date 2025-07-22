@@ -88,7 +88,7 @@ const PhageClusterInfoModal = ({ isOpen, onClose, data }) => {
       aria-modal="true"
     >
       <div
-        className="bg-gray-900 rounded-lg p-6 max-w-3xl w-full max-h-[80vh] overflow-auto text-white relative"
+        className="bg-base-100 text-base-content rounded-lg p-6 max-w-3xl w-full max-h-[80vh] overflow-auto relative shadow-lg"
         onClick={e => e.stopPropagation()}
       >
         <h2 className="text-2xl font-bold mb-4">Phage & Cluster Explorer</h2>
@@ -104,7 +104,7 @@ const PhageClusterInfoModal = ({ isOpen, onClose, data }) => {
         <div className="mb-4">
           <label className="mr-4 font-semibold">Mode:</label>
           <select
-            className="select select-sm select-bordered bg-gray-800 text-white"
+            className="select select-sm select-bordered"
             value={mode}
             onChange={e => setMode(e.target.value)}
           >
@@ -133,7 +133,6 @@ const PhageClusterInfoModal = ({ isOpen, onClose, data }) => {
           </h3>
           {result.length > 0 ? (
             result.map(({ label, contributors }) => {
-              // Remove duplicate contributors by unique key (name|cluster)
               const uniqueContributors = Array.from(
                 new Map(contributors.map(c => [`${c.name}|${c.cluster}`, c])).values()
               );
@@ -144,7 +143,7 @@ const PhageClusterInfoModal = ({ isOpen, onClose, data }) => {
                   <ul className="ml-4 list-disc max-h-40 overflow-auto">
                     {uniqueContributors.map(({ name, cluster }, i) => (
                       <li key={`${label}-${name}-${cluster}-${i}`}>
-                        {name} <span className="text-xs text-gray-400">({cluster})</span>
+                        {name} <span className="text-xs text-base-content/60">({cluster})</span>
                       </li>
                     ))}
                   </ul>
@@ -152,7 +151,7 @@ const PhageClusterInfoModal = ({ isOpen, onClose, data }) => {
               );
             })
           ) : (
-            <p className="italic text-gray-400">No common results found for selected items.</p>
+            <p className="italic text-base-content/60">No common results found for selected items.</p>
           )}
         </div>
       </div>

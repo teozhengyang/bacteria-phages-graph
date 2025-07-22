@@ -81,7 +81,7 @@ const CustomiserPanel = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 base-100 text-base-content">
       <h2 className="font-bold text-md">Visible Clusters</h2>
       <div className="flex flex-wrap gap-2">
         {clusters.map(c => (
