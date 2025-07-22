@@ -19,13 +19,12 @@ const TreeMatrix = ({
 
     const isDark = theme === 'dark';
 
-    // Colors based on theme
-    const colors = {
-      clusterCircleFill: isDark ? '#4a5568' : '#ccc',
+    // Base colors based on theme
+    const baseColors = {
       clusterCircleStroke: isDark ? '#718096' : '#999',
       bacteriaOuterFill: isDark ? '#2d3748' : '#eee',
       bacteriaOuterStroke: isDark ? '#4a5568' : '#999',
-      bacteriaInnerFill: isDark ? '#3182ce' : '#2b6cb0',
+      bacteriaInnerFillDefault: isDark ? '#3182ce' : '#2b6cb0',
       clusterTextFill: isDark ? 'white' : 'black',
       bacteriaTextFill: isDark ? 'white' : 'black',
       linkStroke: isDark ? '#718096' : '#bbb',
@@ -36,6 +35,7 @@ const TreeMatrix = ({
       phageTextFill: isDark ? 'white' : 'black',
     };
 
+    // Setup SVG and clear previous
     const svg = d3.select(ref.current);
     svg.selectAll('*').remove();
 
@@ -49,17 +49,16 @@ const TreeMatrix = ({
     const clusterLabelOffsetX = -15;
     const bacteriaLabelOffsetX = -12;
 
-    // --- Mark clusters as visible/invisible without pruning ---
+    // Mark cluster visibility
     function markClusterVisibility(node, visibleSet) {
       const isVisible = visibleSet.has(node.name);
-      const markedNode = {
+      return {
         ...node,
         _visible: isVisible,
         children: node.children
           ? node.children.map((child) => markClusterVisibility(child, visibleSet))
           : undefined,
       };
-      return markedNode;
     }
 
     const visibleSet = new Set(visibleClusters);
@@ -70,6 +69,19 @@ const TreeMatrix = ({
       if (!clusterNode.children) return [];
       return clusterNode.children.filter((child) => !child.children);
     }
+
+    // Color scale for clusters (categorical)
+    // Get all cluster names for domain, ignoring invisible
+    const allClusters = root
+      .descendants()
+      .filter((d) => d.children && d.data._visible)
+      .map((d) => d.data.name);
+
+    // Use a d3 scheme for distinct colors, repeat if more clusters than colors
+    const clusterColorScale = d3
+      .scaleOrdinal()
+      .domain(allClusters)
+      .range(d3.schemeSet2.concat(d3.schemeSet3).flat()); // combined palettes for more colors
 
     function computeHeight(node) {
       if (!node.children) return verticalSpacing;
@@ -158,7 +170,7 @@ const TreeMatrix = ({
           .append('path')
           .attr('class', 'link')
           .attr('fill', 'none')
-          .attr('stroke', colors.linkStroke)
+          .attr('stroke', baseColors.linkStroke)
           .attr('stroke-width', 2)
           .attr('d', () => {
             const startX = offsetX + node.x;
@@ -176,7 +188,7 @@ const TreeMatrix = ({
             .append('path')
             .attr('class', 'link')
             .attr('fill', 'none')
-            .attr('stroke', colors.linkStroke)
+            .attr('stroke', baseColors.linkStroke)
             .attr('stroke-width', 2)
             .attr('d', () => {
               const startX = offsetX + node.x;
@@ -198,15 +210,16 @@ const TreeMatrix = ({
       .attr('class', 'cluster-node')
       .attr('transform', (d) => `translate(${offsetX + d.x},${offsetY + d.y})`);
 
-    // Only show cluster circle and label if visible
+    // Color cluster circle fill with cluster color
     clusterGroup
       .append('circle')
       .attr('r', 10)
-      .attr('fill', colors.clusterCircleFill)
-      .attr('stroke', colors.clusterCircleStroke)
+      .attr('fill', (d) => clusterColorScale(d.data.name))
+      .attr('stroke', baseColors.clusterCircleStroke)
       .attr('stroke-width', 2)
-      .style('opacity', (d) => (d.data._visible ? 1 : 0)); // Hide circle if not visible
+      .style('opacity', (d) => (d.data._visible ? 1 : 0));
 
+    // Color cluster text to match cluster circle fill for nice effect
     clusterGroup
       .append('text')
       .attr('dx', clusterLabelOffsetX)
@@ -214,8 +227,8 @@ const TreeMatrix = ({
       .style('text-anchor', 'end')
       .style('font-size', '20px')
       .style('font-weight', '700')
-      .style('fill', colors.clusterTextFill)
-      .style('opacity', (d) => (d.data._visible ? 1 : 0)) // Hide text if not visible
+      .style('fill', (d) => clusterColorScale(d.data.name))
+      .style('opacity', (d) => (d.data._visible ? 1 : 0))
       .text((d) => d.data.name);
 
     // Draw bacteria
@@ -228,14 +241,32 @@ const TreeMatrix = ({
       .attr('class', 'bacteria-node')
       .attr('transform', (d) => `translate(${offsetX + d.x},${offsetY + d.y})`);
 
+    // For each bacterium, find its parent cluster (direct parent in hierarchy)
     bactGroup
       .append('circle')
       .attr('r', 7)
-      .attr('fill', colors.bacteriaOuterFill)
-      .attr('stroke', colors.bacteriaOuterStroke)
+      // Outer circle: cluster color with some opacity for highlight effect
+      .attr('fill', (d) => {
+        const parentClusterName = d.parent?.data?.name;
+        if (parentClusterName && clusterColorScale.domain().includes(parentClusterName)) {
+          return d3.color(clusterColorScale(parentClusterName)).copy({ opacity: 0.3 });
+        }
+        return baseColors.bacteriaOuterFill;
+      })
+      .attr('stroke', baseColors.bacteriaOuterStroke)
       .attr('stroke-width', 1);
 
-    bactGroup.append('circle').attr('r', 4).attr('fill', colors.bacteriaInnerFill);
+    // Inner circle: cluster color stronger, or fallback
+    bactGroup
+      .append('circle')
+      .attr('r', 4)
+      .attr('fill', (d) => {
+        const parentClusterName = d.parent?.data?.name;
+        if (parentClusterName && clusterColorScale.domain().includes(parentClusterName)) {
+          return clusterColorScale(parentClusterName);
+        }
+        return baseColors.bacteriaInnerFillDefault;
+      });
 
     bactGroup
       .append('text')
@@ -244,7 +275,7 @@ const TreeMatrix = ({
       .style('text-anchor', 'end')
       .style('font-size', '16px')
       .style('font-weight', '600')
-      .style('fill', colors.bacteriaTextFill)
+      .style('fill', baseColors.bacteriaTextFill)
       .text((d) => d.data.name);
 
     // Phage column headers
@@ -263,11 +294,11 @@ const TreeMatrix = ({
       )
       .style('font-weight', '700')
       .style('font-size', '18px')
-      .style('fill', colors.phageTextFill)
+      .style('fill', baseColors.phageTextFill)
       .style('user-select', 'none')
       .text((d) => d.name);
 
-    // Phage-bacteria circles matrix
+    // Phage-bacteria matrix circles
     root.leaves().forEach((leaf) => {
       svg
         .selectAll(null)
@@ -285,10 +316,10 @@ const TreeMatrix = ({
         .attr('cy', leaf.y + offsetY)
         .attr('r', 8)
         .attr('fill', (d) =>
-          d ? colors.phageCircleFillPositive : colors.phageCircleFillNegative
+          d ? baseColors.phageCircleFillPositive : baseColors.phageCircleFillNegative
         )
         .attr('stroke', (d) =>
-          d ? colors.phageCircleStrokePositive : colors.phageCircleStrokeNegative
+          d ? baseColors.phageCircleStrokePositive : baseColors.phageCircleStrokeNegative
         )
         .attr('stroke-width', 1);
     });
