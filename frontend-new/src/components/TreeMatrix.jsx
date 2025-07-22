@@ -42,14 +42,17 @@ const TreeMatrix = ({
     const margin = { top: 150, right: 40, bottom: 40, left: 20 };
     const cellSize = 50;
     const clusterWidth = 100;
-    const verticalSpacing = 40;
+
+    // Separate spacing controls
+    const bacteriaSpacing = 30;  // Spacing between bacteria within same cluster
+    const clusterSpacing = 15;   // Additional spacing between clusters (larger gap)
 
     const offsetX = margin.left;
     const offsetY = margin.top - 40;
     const clusterLabelOffsetX = -15;
     const bacteriaLabelOffsetX = -12;
 
-    // Mark cluster visibility
+    // Mark cluster visibility recursively
     function markClusterVisibility(node, visibleSet) {
       const isVisible = visibleSet.has(node.name);
       return {
@@ -70,67 +73,99 @@ const TreeMatrix = ({
       return clusterNode.children.filter((child) => !child.children);
     }
 
-    // Color scale for clusters (categorical)
-    // Get all cluster names for domain, ignoring invisible
+    // Get all visible cluster names for color scale domain
     const allClusters = root
       .descendants()
       .filter((d) => d.children && d.data._visible)
       .map((d) => d.data.name);
 
-    // Use a d3 scheme for distinct colors, repeat if more clusters than colors
+    // Color scale for clusters (combined color schemes for more variety)
     const clusterColorScale = d3
       .scaleOrdinal()
       .domain(allClusters)
-      .range(d3.schemeSet2.concat(d3.schemeSet3).flat()); // combined palettes for more colors
+      .range(d3.schemeSet2.concat(d3.schemeSet3).flat());
 
+    // Compute vertical height of cluster subtree with proper spacing
     function computeHeight(node) {
-      if (!node.children) return verticalSpacing;
+      if (!node.children) return bacteriaSpacing;
 
       const directBacteria = getDirectBacteriaNodes(node);
       const childClusters = node.children.filter((c) => c.children);
 
-      const bacteriaHeight = directBacteria.length * verticalSpacing;
+      // Bacteria height uses bacteriaSpacing
+      const bacteriaHeight = directBacteria.length > 0 ? directBacteria.length * bacteriaSpacing : 0;
+      
+      // Child clusters height with cluster spacing between them
       let childrenHeight = 0;
-      childClusters.forEach((child) => {
+      childClusters.forEach((child, index) => {
         childrenHeight += computeHeight(child);
+        // Add cluster spacing between child clusters (but not after the last one)
+        if (index < childClusters.length - 1) {
+          childrenHeight += clusterSpacing;
+        }
       });
 
-      const totalHeight = bacteriaHeight + childrenHeight;
+      // Add cluster spacing between bacteria and child clusters if both exist
+      const spacingBetweenBacteriaAndClusters = (directBacteria.length > 0 && childClusters.length > 0) ? clusterSpacing : 0;
+      
+      const totalHeight = bacteriaHeight + spacingBetweenBacteriaAndClusters + childrenHeight;
       node.clusterHeight = totalHeight;
       return totalHeight;
     }
 
     computeHeight(root);
 
+    // Assign x/y positions to clusters and bacteria with proper spacing
     function assignPositions(node, startY, currentX = 0) {
       if (!node.children) {
         node.x = currentX;
         node.y = startY;
-        return verticalSpacing;
+        return bacteriaSpacing;
       }
 
       const directBacteria = getDirectBacteriaNodes(node);
       const childClusters = node.children.filter((c) => c.children);
 
-      const bacteriaHeight = directBacteria.length * verticalSpacing;
-      const childrenHeight = childClusters.reduce((acc, c) => acc + computeHeight(c), 0);
-      const totalHeight = bacteriaHeight + childrenHeight;
+      const bacteriaHeight = directBacteria.length > 0 ? directBacteria.length * bacteriaSpacing : 0;
+      
+      let childrenHeight = 0;
+      childClusters.forEach((child, index) => {
+        childrenHeight += computeHeight(child);
+        if (index < childClusters.length - 1) {
+          childrenHeight += clusterSpacing;
+        }
+      });
 
+      const spacingBetweenBacteriaAndClusters = (directBacteria.length > 0 && childClusters.length > 0) ? clusterSpacing : 0;
+      const totalHeight = bacteriaHeight + spacingBetweenBacteriaAndClusters + childrenHeight;
+
+      // Position the cluster node at the center of its subtree
       node.x = currentX;
       node.y = startY + totalHeight / 2;
 
       const stackedX = currentX + clusterWidth;
       let currentY = startY;
 
+      // Position bacteria with bacteriaSpacing
       directBacteria.forEach((bactNode) => {
         bactNode.x = stackedX;
-        bactNode.y = currentY;
-        currentY += verticalSpacing;
+        bactNode.y = currentY + bacteriaSpacing / 2; // Center bacteria in their allocated space
+        currentY += bacteriaSpacing;
       });
 
-      childClusters.forEach((child) => {
+      // Add spacing between bacteria and child clusters if both exist
+      if (directBacteria.length > 0 && childClusters.length > 0) {
+        currentY += clusterSpacing;
+      }
+
+      // Position child clusters with clusterSpacing between them
+      childClusters.forEach((child, index) => {
         assignPositions(child, currentY, stackedX);
         currentY += child.clusterHeight;
+        // Add cluster spacing between child clusters (but not after the last one)
+        if (index < childClusters.length - 1) {
+          currentY += clusterSpacing;
+        }
       });
 
       return totalHeight;
@@ -138,17 +173,22 @@ const TreeMatrix = ({
 
     assignPositions(root, 0, -clusterWidth / 2);
 
+    // Calculate SVG dimensions
     const maxY = d3.max(root.descendants().map((d) => d.y));
     const maxX = d3.max(root.descendants().map((d) => d.x));
-    const height = maxY + margin.top + margin.bottom + 50;
+    const height = maxY + margin.top + margin.bottom + 20;
 
+    // Prepare phage columns
     const clusteredPhageColumns = visiblePhages.map((phage) => ({
       name: phage,
       phages: [phage],
     }));
 
     const matrixWidth = clusteredPhageColumns.length * cellSize;
-    const xStart = margin.left + maxX + 20;
+
+    // Reduce horizontal gap between bacteria and phages (keep cluster-to-bacteria gap)
+    const horizontalGapBetweenBacteriaAndPhages = 10; // reduced from 20
+    const xStart = margin.left + maxX + horizontalGapBetweenBacteriaAndPhages;
     const svgWidth = xStart + matrixWidth + margin.right;
 
     const xScale = d3
@@ -159,9 +199,9 @@ const TreeMatrix = ({
 
     svg.attr('width', svgWidth).attr('height', height);
 
-    // Draw links: cluster -> bacteria and cluster -> child clusters
+    // Draw links (cluster->bacteria and cluster->child clusters)
     root.descendants().forEach((node) => {
-      if (!node.children || !node.data._visible) return; // Only draw links from visible clusters
+      if (!node.children || !node.data._visible) return;
 
       const bacteria = getDirectBacteriaNodes(node);
 
@@ -200,7 +240,7 @@ const TreeMatrix = ({
         });
     });
 
-    // Draw clusters
+    // Draw cluster nodes (circles + text)
     const clusterNodes = root.descendants().filter((d) => d.children);
     const clusterGroup = svg
       .selectAll('.cluster-node')
@@ -210,7 +250,6 @@ const TreeMatrix = ({
       .attr('class', 'cluster-node')
       .attr('transform', (d) => `translate(${offsetX + d.x},${offsetY + d.y})`);
 
-    // Color cluster circle fill with cluster color
     clusterGroup
       .append('circle')
       .attr('r', 10)
@@ -219,7 +258,6 @@ const TreeMatrix = ({
       .attr('stroke-width', 2)
       .style('opacity', (d) => (d.data._visible ? 1 : 0));
 
-    // Color cluster text to match cluster circle fill for nice effect
     clusterGroup
       .append('text')
       .attr('dx', clusterLabelOffsetX)
@@ -231,7 +269,7 @@ const TreeMatrix = ({
       .style('opacity', (d) => (d.data._visible ? 1 : 0))
       .text((d) => d.data.name);
 
-    // Draw bacteria
+    // Draw bacteria nodes
     const bacteriaNodes = root.leaves();
     const bactGroup = svg
       .selectAll('.bacteria-node')
@@ -241,11 +279,9 @@ const TreeMatrix = ({
       .attr('class', 'bacteria-node')
       .attr('transform', (d) => `translate(${offsetX + d.x},${offsetY + d.y})`);
 
-    // For each bacterium, find its parent cluster (direct parent in hierarchy)
     bactGroup
       .append('circle')
       .attr('r', 7)
-      // Outer circle: cluster color with some opacity for highlight effect
       .attr('fill', (d) => {
         const parentClusterName = d.parent?.data?.name;
         if (parentClusterName && clusterColorScale.domain().includes(parentClusterName)) {
@@ -256,7 +292,6 @@ const TreeMatrix = ({
       .attr('stroke', baseColors.bacteriaOuterStroke)
       .attr('stroke-width', 1);
 
-    // Inner circle: cluster color stronger, or fallback
     bactGroup
       .append('circle')
       .attr('r', 4)
@@ -325,6 +360,7 @@ const TreeMatrix = ({
     });
   }, [treeData, headers, visibleClusters, visiblePhages, bacteriaClusterOrderArr, theme]);
 
+  // Save SVG as PNG function
   const handleSave = () => {
     const svgElement = ref.current;
     const svgData = new XMLSerializer().serializeToString(svgElement);
