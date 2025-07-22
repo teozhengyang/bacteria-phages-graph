@@ -12,6 +12,7 @@ function App() {
   const [visiblePhages, setVisiblePhages] = useState([]);
   const [bacteriaClusters, setBacteriaClusters] = useState({});
   const [clusterBacteriaOrder, setClusterBacteriaOrder] = useState({});
+  const [clusterChildrenOrder, setClusterChildrenOrder] = useState({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalFileName, setOriginalFileName] = useState('');
@@ -25,6 +26,16 @@ function App() {
     e.preventDefault();
     setResizing(true);
   };
+
+  const updateClusterParent = (clusterName, newParent) => {
+  setAllClusters(prev =>
+    prev.map(c =>
+      c.name === clusterName ? { ...c, parent: newParent } : c
+    )
+  );
+  setHasUnsavedChanges(true);
+};
+
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -219,7 +230,7 @@ function App() {
 
   useEffect(() => {
     if (data) setHasUnsavedChanges(true);
-  }, [visibleClusters, visiblePhages, bacteriaClusters]);
+  }, [visibleClusters, visiblePhages, bacteriaClusters, data]);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -263,10 +274,12 @@ function App() {
               theme={theme}
               toggleTheme={toggleTheme}
               setShowSidebar={setShowSidebar}
-
-              // New modal related props
               clusterInfoData={clusterInfoData}
+              updateClusterParent={updateClusterParent}
+              clusterChildrenOrder={clusterChildrenOrder}
+              setClusterChildrenOrder={setClusterChildrenOrder}
             />
+
           </div>
 
           <div onMouseDown={startResizing} className="cursor-col-resize w-2 bg-gray-700 hover:bg-gray-600" />
@@ -290,6 +303,8 @@ function App() {
           visibleClusters={visibleClusters}
           visiblePhages={visiblePhages}
           bacteriaClusterOrderArr={Object.keys(clusterBacteriaOrder)}
+          clusterBacteriaOrder={clusterBacteriaOrder}
+          clusterChildrenOrder={clusterChildrenOrder}
         />
       </div>
     </div>
