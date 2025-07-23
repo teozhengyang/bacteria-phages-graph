@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { aggregatePhageClusterInfo } from '../utils/aggregatePhageClusterInfo';
 import PhageClusterInfoModal from './PhageClusterInfoModal';
-import { distinctColors50 } from '../utils/colourPalette';
+import { colours } from '../utils/colourPalette';
 
 const TreeMatrix = ({
   treeData,
@@ -100,7 +100,7 @@ const TreeMatrix = ({
     const clusterColorScale = d3
       .scaleOrdinal()
       .domain(allClusters)
-      .range(distinctColors50);
+      .range(colours);
 
     function computeHeight(node) {
       if (!node.children) return bacteriaSpacing;
