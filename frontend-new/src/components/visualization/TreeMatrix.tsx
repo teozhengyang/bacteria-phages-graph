@@ -2,10 +2,11 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { TreeMatrixProps, TreeNode } from '../types';
-import { aggregatePhageClusterInfo } from '../utils/aggregatePhageClusterInfo';
-import PhageClusterInfoModal from './PhageClusterInfoModal';
-import { colours, UI_CONSTANTS } from '../constants';
+import { TreeMatrixProps, TreeNode } from '../../types';
+import { aggregatePhageClusterInfo } from '../../utils/aggregatePhageClusterInfo';
+import PhageClusterInfoModal from '../modals/PhageClusterInfoModal';
+import SaveControls from './SaveControls';
+import { colours, UI_CONSTANTS } from '../../constants';
 
 interface TreeNodeData extends TreeNode {
   _visible?: boolean;
@@ -29,6 +30,36 @@ const TreeMatrix: React.FC<TreeMatrixProps> = ({
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleSave = () => {
+    if (!ref.current) return;
+    
+    const svgElement = ref.current;
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = svgElement.clientWidth;
+      canvas.height = svgElement.clientHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = theme === 'dark' ? '#1a202c' : 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      }
+      URL.revokeObjectURL(url);
+
+      const pngURL = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = 'tree-matrix.png';
+      link.href = pngURL;
+      link.click();
+    };
+    img.src = url;
+  };
 
   useEffect(() => {
     if (!treeData || !ref.current) return;
@@ -375,51 +406,12 @@ const TreeMatrix: React.FC<TreeMatrixProps> = ({
     });
   }, [treeData, headers, visibleClusters, visiblePhages, bacteriaClusterOrderArr, theme, clusterChildrenOrder, clusterBacteriaOrder]);
 
-  const handleSave = () => {
-    if (!ref.current) return;
-    
-    const svgElement = ref.current;
-    const svgData = new XMLSerializer().serializeToString(svgElement);
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = svgElement.clientWidth;
-      canvas.height = svgElement.clientHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = theme === 'dark' ? '#1a202c' : 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-      }
-      URL.revokeObjectURL(url);
-
-      const pngURL = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = 'tree-matrix.png';
-      link.href = pngURL;
-      link.click();
-    };
-    img.src = url;
-  };
-
   const aggregatedData = aggregatePhageClusterInfo(treeData, headers);
 
   return (
     <div>
-      <div className="flex gap-2 mt-2 ml-2">
-        <button
-          onClick={handleSave}
-          className="px-4 py-1 rounded bg-green-600 hover:bg-green-700 text-white"
-        >
-          Save as PNG
-        </button>
-      </div>
-
+      <SaveControls onSave={handleSave} />
       <svg ref={ref}></svg>
-
       <PhageClusterInfoModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} data={aggregatedData} />
     </div>
   );

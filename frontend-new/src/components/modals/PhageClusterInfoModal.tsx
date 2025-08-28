@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { PhageClusterInfoModalProps, PhageClusterResult } from '../types';
+import { PhageClusterInfoModalProps, PhageClusterResult } from '../../types';
 
 const PhageClusterInfoModal: React.FC<PhageClusterInfoModalProps> = ({ isOpen, onClose, data }) => {
   const { clusters = {} } = data || {};
