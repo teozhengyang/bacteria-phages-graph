@@ -241,64 +241,6 @@ components/
     └── SaveControls.tsx           # Export functionality
 ```
 
-## Common Issues & Solutions
-
-### Performance Issues
-
-#### Problem: Slow rendering with large datasets
-**Symptoms**: UI becomes unresponsive when loading files with many bacteria/phages
-**Solution**:
-1. Check `visiblePhages` array - limit to essential phages
-2. Use cluster filtering to reduce displayed bacteria
-3. Consider pagination for very large datasets
-
-**Code Location**: `src/hooks/useTreeVisualization.ts`
-
-#### Problem: Memory issues with frequent state updates
-**Symptoms**: Browser becomes slow after many cluster operations
-**Solution**:
-1. Ensure proper cleanup in `useEffect` hooks
-2. Use `useCallback` for event handlers
-3. Minimize unnecessary re-renders
-
-### Data Processing Issues
-
-#### Problem: Excel file parsing fails
-**Symptoms**: Error messages during file upload
-**Troubleshooting**:
-1. Check Excel file format - ensure headers are in row 2
-2. Verify bacteria names are in column 1
-3. Check for empty rows/columns that might cause parsing issues
-
-**Code Location**: `src/utils/excelParser.ts`
-
-#### Problem: Cluster hierarchy corruption
-**Symptoms**: Clusters disappear or show incorrect relationships
-**Solution**:
-1. Check `DataService.validateClusterOperation()` for validation logic
-2. Ensure no circular dependencies in cluster parent-child relationships
-3. Verify cluster deletion properly handles cascading updates
-
-**Code Location**: `src/services/dataService.ts` (validateClusterOperation method)
-
-### Visualization Issues
-
-#### Problem: D3 visualization not updating
-**Symptoms**: Changes in data don't reflect in the matrix
-**Troubleshooting**:
-1. Check if `treeData` is being regenerated correctly
-2. Verify `useTreeVisualization` dependencies array
-3. Ensure SVG ref is properly connected
-
-**Code Location**: `src/hooks/useTreeVisualization.ts`
-
-#### Problem: Incorrect bacteria-phage matrix values
-**Symptoms**: Matrix shows wrong interaction values
-**Solution**:
-1. Verify Excel parsing converts values correctly (binary 0/1)
-2. Check bacteria ordering matches data order
-3. Validate phage header extraction
-
 ## Development Guidelines
 
 ### Adding New Features
