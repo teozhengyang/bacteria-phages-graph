@@ -1,3 +1,14 @@
+/**
+ * CustomiserPanel Component - Main Sidebar Configuration Interface
+ * 
+ * This component serves as the central control panel for all user customizations
+ * including cluster management, visibility controls, bacteria assignments, 
+ * session management, and phage cluster information display.
+ * 
+ * The panel is organized into collapsible sections for better user experience
+ * and includes validation to prevent invalid operations.
+ */
+
 'use client';
 
 import React, { useState } from 'react';
@@ -11,43 +22,74 @@ import VisiblePhagesControl from './VisiblePhagesControl';
 import SessionManager from './SessionManager';
 import PhageClusterInfoModal from '../modals/PhageClusterInfoModal';
 
+/**
+ * CustomiserPanel - Comprehensive sidebar for application configuration
+ * 
+ * Provides all the tools users need to customize their visualization:
+ * - Create and manage clusters
+ * - Assign bacteria to clusters
+ * - Control visibility of clusters and phages
+ * - Import/export session configurations
+ * - View detailed phage cluster information
+ * 
+ * @param {CustomiserPanelProps} props - All configuration data and state setters
+ * @returns {JSX.Element} The complete customization sidebar
+ */
 const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
-  headers,
-  clusters,
-  visibleClusters,
-  visiblePhages,
-  setVisibleClusters,
-  setVisiblePhages,
-  bacteria,
-  bacteriaClusters,
-  setBacteriaClusters,
-  clusterBacteriaOrder,
-  setClusterBacteriaOrder,
-  addCluster,
-  deleteCluster,
-  updateClusterParent,
-  clusterChildrenOrder,
-  setClusterChildrenOrder,
-  importSession,
-  exportSession,
-  theme,
-  toggleTheme,
-  setShowSidebar,
-  clusterInfoData,
+  headers,                    // Array of phage names from the data
+  clusters,                   // All user-created clusters
+  visibleClusters,           // Currently visible clusters
+  visiblePhages,             // Currently visible phages
+  setVisibleClusters,        // Function to update visible clusters
+  setVisiblePhages,          // Function to update visible phages
+  bacteria,                  // All bacteria names from the data
+  bacteriaClusters,          // Mapping of bacteria to their clusters
+  setBacteriaClusters,       // Function to update bacteria-cluster assignments
+  clusterBacteriaOrder,      // Display order of bacteria within clusters
+  setClusterBacteriaOrder,   // Function to update bacteria ordering
+  addCluster,                // Function to create new clusters
+  deleteCluster,             // Function to remove clusters
+  updateClusterParent,       // Function to change cluster hierarchy
+  clusterChildrenOrder,      // Display order of child clusters
+  setClusterChildrenOrder,   // Function to update cluster children ordering
+  importSession,             // Function to import saved sessions
+  exportSession,             // Function to export current session
+  theme,                     // Current theme setting
+  toggleTheme,               // Function to toggle theme
+  setShowSidebar,           // Function to control sidebar visibility
+  clusterInfoData,          // Phage cluster interaction data for modal
 }) => {
+  // State for controlling the phage cluster information modal
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  /**
+   * Handle cluster deletion with validation and confirmation
+   * Prevents deletion of the Root cluster and confirms user intent
+   * 
+   * @param {string} clusterName - Name of the cluster to delete
+   */
   const onDeleteCluster = (clusterName: string) => {
+    // Prevent deletion of the essential Root cluster
     if (clusterName === 'Root') {
       alert('Cannot delete the Root cluster.');
       return;
     }
+    
+    // Confirm deletion to prevent accidental data loss
     if (window.confirm(`Are you sure you want to delete "${clusterName}"?`)) {
       deleteCluster(clusterName);
     }
   };
 
+  /**
+   * Handle cluster parent updates with validation
+   * Prevents invalid parent assignments for the Root cluster
+   * 
+   * @param {string} clusterName - Name of the cluster to modify
+   * @param {string} newParent - Name of the new parent cluster
+   */
   const onUpdateClusterParent = (clusterName: string, newParent: string) => {
+    // Root cluster cannot have its parent changed
     if (clusterName === 'Root') {
       alert('Cannot change parent of Root cluster.');
       return;
