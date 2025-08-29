@@ -3,461 +3,326 @@
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)
 2. [Data Flow](#data-flow)
-3. [Key Components](#key-components)
-4. [State Management](#state-management)
-5. [File Structure](#file-structure)
-6. [Common Issues & Solutions](#common-issues--solutions)
-7. [Development Guidelines](#development-guidelines)
-8. [API Reference](#api-reference)
+3. [State Management](#state-management)
+4. [File Structure](#file-structure)
 
 ## Architecture Overview
 
 The Bacteria-Phages Graph application is a Next.js React application that visualizes bacteria-phage interactions using D3.js. The architecture follows a modular design with clear separation of concerns:
 
 ```
-┌─────────────────────────────────────────────┐
-│                   UI Layer                  │
-│  ┌─────────────┐  ┌─────────────────────────┐ │
-│  │ FileUploader│  │     Main App Layout     │ │
-│  └─────────────┘  │ ┌─────────┐ ┌─────────┐ │ │
-│                   │ │Sidebar  │ │TreeMatrix│ │ │
-│                   │ │Panel    │ │Visualize│ │ │
-│                   │ └─────────┘ └─────────┘ │ │
-│                   └─────────────────────────┘ │
-├─────────────────────────────────────────────┤
-│                Hooks Layer                  │
-│  ┌─────────────────────────────────────────┐ │
-│  │ useAppState | useTheme | useTreeViz     │ │
-│  └─────────────────────────────────────────┘ │
-├─────────────────────────────────────────────┤
-│               Services Layer                │
-│  ┌─────────────────────────────────────────┐ │
-│  │ DataService | ThemeService             │ │
-│  └─────────────────────────────────────────┘ │
-├─────────────────────────────────────────────┤
-│                Utils Layer                  │
-│  ┌─────────────────────────────────────────┐ │
-│  │ excelParser | sessionUtils | d3Utils   │ │
-│  └─────────────────────────────────────────┘ │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                 UI LAYER                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────┐  ┌─────────────────────────────────────────────────┐ │
+│  │    File Upload      │  │                Main Layout                      │ │
+│  │  ┌───────────────┐  │  │  ┌─────────────────────┐ ┌─────────────────────┐ │ │
+│  │  │  DropZone     │  │  │  │   Sidebar Panel     │ │   Visualization     │ │ │
+│  │  ├───────────────┤  │  │  │ ┌─────────────────┐ │ │ ┌─────────────────┐ │ │ │
+│  │  │ UploadButton  │  │  │  │ │ ClusterManager  │ │ │ │   TreeMatrix    │ │ │ │
+│  │  └───────────────┘  │  │  │ ├─────────────────┤ │ │ │    (D3.js)      │ │ │ │
+│  └─────────────────────┘  │  │  │ BacteriaAssigner│ │ │ ├─────────────────┤ │ │ │
+│                           │  │  │ ├─────────────────┤ │ │ │ SaveControls    │ │ │ │
+│  ┌─────────────────────┐  │  │  │ │ VisibilityCtrl  │ │ │ └─────────────────┘ │ │ │
+│  │      Modals         │  │  │  │ ├─────────────────┤ │ └─────────────────────┘ │ │
+│  │ ┌─────────────────┐ │  │  │  │ │ SessionManager  │ │                         │ │
+│  │ │ PhageClusterInfo│ │  │  │  │ ├─────────────────┤ │                         │ │
+│  │ │     Modal       │ │  │  │  │ │   ThemeToggle   │ │                         │ │
+│  │ └─────────────────┘ │  │  │  └─────────────────┘ │                         │ │
+│  └─────────────────────┘  │  └─────────────────────────┘                         │ │
+│                           └─────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                HOOKS LAYER                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────────┐ ┌───────────┐ │
+│  │ useAppState │ │   useTheme   │ │useTreeVisual │ │useFileUpload│ │  useSave  │ │
+│  │   (Core)    │ │ (Theming)    │ │   (D3.js)    │ │(Validation) │ │(Export)   │ │
+│  └─────────────┘ └──────────────┘ └──────────────┘ └─────────────┘ └───────────┘ │
+│          │               │                │               │             │        │
+│          ▼               ▼                ▼               ▼             ▼        │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                              SERVICES LAYER                                     │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────┐     ┌─────────────────────────────────────┐ │
+│  │          DataService            │     │         ThemeService                │ │
+│  │ ┌─────────────────────────────┐ │     │ ┌─────────────────────────────────┐ │ │
+│  │ │ • File Processing           │ │     │ │ • Theme Persistence             │ │ │
+│  │ │ • Tree Data Generation      │ │     │ │ • localStorage Integration      │ │ │
+│  │ │ • Cluster Validation        │ │     │ │ • System Theme Detection        │ │ │
+│  │ │ • Session Management        │ │     │ └─────────────────────────────────┘ │ │
+│  │ └─────────────────────────────┘ │     └─────────────────────────────────────┘ │
+│  └─────────────────────────────────┘                                             │
+│                    │                                                             │
+│                    ▼                                                             │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                UTILS LAYER                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
+│  │excelParser  │ │sessionUtils │ │treeCalc     │ │arrayUtils   │ │fileUtils    │ │
+│  │(File I/O)   │ │(Import/     │ │(D3 Data     │ │(Processing) │ │(Validation) │ │
+│  │             │ │ Export)     │ │ Prep)       │ │             │ │             │ │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│  │              visualizationUtils & aggregatePhageClusterInfo                 │ │
+│  │                    (D3.js Helpers & Statistical Analysis)                  │ │
+│  └─────────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+                            ┌─── Data Flow Direction ───┐
+                            │                           │
+    Excel File Input ──────►│     ┌─────────────────┐   │──────► D3.js SVG
+                            │     │  State Updates  │   │        Visualization
+    User Interactions ─────►│     │   (useAppState) │   │──────► UI Re-renders
+                            │     └─────────────────┘   │
+    Theme Changes ─────────►│                           │──────► CSS Updates
+                            └───────────────────────────┘
 ```
 
-### Core Principles
-- **Single Responsibility**: Each component and service has a clear, focused purpose
-- **Data Flow**: Unidirectional data flow using React hooks and state management
-- **Separation of Concerns**: UI, business logic, and data processing are clearly separated
-- **Type Safety**: Full TypeScript implementation with comprehensive type definitions
+### Architectural Layers
+
+#### UI Layer
+- **Components**: React components for user interface and interaction
+- **Layout**: Responsive layout with resizable sidebar and main visualization area
+- **Theme Support**: Dark/light mode with system preference detection
+
+#### Hooks Layer
+- **State Management**: Custom hooks for managing application state and business logic
+- **Side Effects**: Hooks for file operations, visualization rendering, and theme management
+- **Data Processing**: Hooks for complex data transformations and D3.js integration
+
+#### Services Layer
+- **Business Logic**: Core application logic and data validation
+- **Data Processing**: Excel file parsing and tree structure generation
+- **Persistence**: Theme preferences and session data management
+
+#### Utils Layer
+- **Utility Functions**: Pure functions for data manipulation and processing
+- **File Operations**: Excel parsing, session import/export
+- **Data Transformations**: Array operations, tree calculations, visualization utilities
 
 ## Data Flow
 
-### 1. File Upload Process
+### 1. File Upload and Processing Flow
 ```
 Excel File → parseExcelFile() → DataService.handleFileUpload() → useAppState → UI Update
 ```
 
-**Detailed Flow:**
-1. User uploads Excel file via FileUploader component
-2. `parseExcelFile()` processes the file:
+**Process:**
+1. **File Selection**: User uploads Excel file via `FileUploader` component
+2. **Parsing**: `parseExcelFile()` utility processes the file:
    - Extracts phage names from header row
-   - Converts bacteria interaction data to binary (0/1)
-   - Structures data into hierarchical format
-3. `DataService.handleFileUpload()` creates initial state:
-   - Sets up default Root cluster
-   - Assigns all bacteria to Root cluster
-   - Initializes visibility settings
-4. `useAppState` hook updates all relevant state
-5. UI re-renders with new data
+   - Converts bacteria interaction data to binary matrix (0/1)
+   - Structures data into hierarchical format for visualization
+3. **State Initialization**: `DataService.handleFileUpload()` creates initial application state:
+   - Sets up default "Root" cluster containing all bacteria
+   - Initializes visibility settings for clusters and phages
+   - Establishes bacteria-to-cluster mappings
+4. **State Update**: `useAppState` hook propagates changes throughout the application
+5. **UI Rendering**: Components re-render with new data and visualization
 
 ### 2. Cluster Management Flow
 ```
-User Action → Component Event → useAppState Function → DataService Validation → State Update
+User Action → Component Event → useAppState Function → DataService Validation → State Update → UI Refresh
 ```
 
-**Example - Adding a Cluster:**
-1. User clicks "Add Cluster" in CustomiserPanel
-2. `AddClusterForm` triggers `addCluster()` function
-3. `useAppState.addCluster()` called with cluster name
-4. New cluster added to `allClusters` array
-5. Cluster added to `visibleClusters` array
-6. Empty bacteria order initialized in `clusterBacteriaOrder`
-7. UI re-renders showing new cluster
+**Operations:**
+- **Add Cluster**: User creates new cluster → validation → state update → UI refresh
+- **Delete Cluster**: User removes cluster → dependency check → bacteria reassignment → state update
+- **Modify Hierarchy**: User changes cluster parent → validation → reordering → state update
+- **Assign Bacteria**: User moves bacteria between clusters → validation → mapping update
 
 ### 3. Visualization Rendering Flow
 ```
-State Change → buildTreeData() → useTreeVisualization → D3.js Rendering → SVG Update
+State Change → buildTreeData() → useTreeVisualization → D3.js Processing → SVG Rendering
 ```
 
-**Detailed Process:**
-1. Any state change triggers `buildTreeData()` re-computation
-2. `DataService.buildTreeData()` transforms flat data into hierarchical structure
-3. `useTreeVisualization` hook processes tree data for D3
-4. D3.js creates/updates SVG elements with new visualization
-5. User sees updated matrix with current bacteria/phage selections
+**Process:**
+1. **Data Preparation**: Any state change triggers `buildTreeData()` recalculation
+2. **Tree Structure**: `DataService.buildTreeData()` transforms flat cluster data into hierarchical tree
+3. **D3 Integration**: `useTreeVisualization` hook processes tree data for D3.js consumption
+4. **Rendering**: D3.js creates/updates SVG elements with interactive matrix visualization
+5. **User Interaction**: Hover effects, click handlers, and visual feedback
 
 ### 4. Session Management Flow
 ```
-Export: Current State → SessionData Object → JSON File Download
-Import: JSON File → Parse/Validate → State Restoration → UI Update
+Export: App State → SessionData Object → JSON File Download
+Import: JSON File Upload → Parse/Validate → State Restoration → UI Synchronization
 ```
-
-## Key Components
-
-### Core Application Components
-
-#### `src/app/page.tsx` - Main Application Container
-- **Purpose**: Orchestrates the entire application layout and component coordination
-- **Key Responsibilities**:
-  - Manages sidebar visibility and resizing
-  - Coordinates theme management
-  - Handles file upload state transitions
-  - Renders main layout with proper responsive behavior
-
-#### `src/hooks/useAppState.ts` - Central State Management
-- **Purpose**: Manages all application state and business logic
-- **Key State Variables**:
-  - `data`: Parsed Excel file data
-  - `allClusters`: All user-created clusters
-  - `visibleClusters`/`visiblePhages`: Controls what's shown in visualization
-  - `bacteriaClusters`: Maps bacteria to clusters
-  - `clusterBacteriaOrder`: Controls bacteria display order
-- **Key Functions**:
-  - `handleFile()`: Process uploaded Excel files
-  - `addCluster()`/`deleteCluster()`: Cluster management
-  - `buildTreeData()`: Generate visualization data structure
-
-#### `src/services/DataService.ts` - Business Logic Layer
-- **Purpose**: Provides business logic and data validation
-- **Key Methods**:
-  - `handleFileUpload()`: Complete file processing workflow
-  - `buildTreeData()`: Complex tree structure generation
-  - `validateClusterOperation()`: Prevent invalid cluster operations
-
-#### `src/components/visualization/TreeMatrix.tsx` - Main Visualization
-- **Purpose**: Renders the bacteria-phage interaction matrix
-- **Key Features**:
-  - D3.js integration for complex visualizations
-  - Interactive hover and click behaviors
-  - Save/export functionality
-  - Theme-aware rendering
-
-### Utility Components
-
-#### File Upload System
-- `FileUploader.tsx`: Main upload interface
-- `DropZone.tsx`: Drag-and-drop functionality
-- `UploadButton.tsx`: Alternative file selection method
-
-#### Customization Panel
-- `CustomiserPanel.tsx`: Main sidebar container
-- `ClusterHierarchyManager.tsx`: Cluster creation/management
-- `BacteriaAssigner.tsx`: Assign bacteria to clusters
-- `VisibleClustersControl.tsx`: Toggle cluster visibility
 
 ## State Management
 
-### State Structure
+### State Architecture
+The application uses a centralized state management approach through the `useAppState` hook, providing a single source of truth for all application data.
+
+### Core State Structure
 ```typescript
-// Core data state
-data: ParsedExcelData | null              // Original Excel data
-allClusters: Cluster[]                    // All created clusters
-visibleClusters: string[]                 // Currently visible clusters
-visiblePhages: string[]                   // Currently visible phages
+// Data State
+data: ParsedExcelData | null              // Original Excel file data
+allClusters: Cluster[]                    // All user-created clusters
+visibleClusters: string[]                 // Currently visible clusters in visualization
+visiblePhages: string[]                   // Currently visible phages in visualization
 
-// Organization state
-bacteriaClusters: BacteriaClusters        // Bacteria → Cluster mapping
-clusterBacteriaOrder: ClusterBacteriaOrder // Bacteria order within clusters
-clusterChildrenOrder: ClusterChildrenOrder // Nested cluster ordering
+// Organization State
+bacteriaClusters: BacteriaClusters        // Maps bacteria names to cluster assignments
+clusterBacteriaOrder: ClusterBacteriaOrder // Controls bacteria display order within clusters
+clusterChildrenOrder: ClusterChildrenOrder // Controls nested cluster hierarchy order
 
-// UI state
-hasUnsavedChanges: boolean               // Tracks modifications
-originalFileName: string                 // For session export naming
+// UI State
+hasUnsavedChanges: boolean               // Tracks if user has unsaved modifications
+originalFileName: string                 // Original uploaded file name for session exports
 ```
 
 ### State Update Patterns
 
-#### Direct State Updates
-Used for simple state changes:
+#### Simple State Updates
+Direct state modifications for straightforward changes:
 ```typescript
-setVisibleClusters(prev => [...prev, newCluster]);
+// Toggle phage visibility
+setVisiblePhages(prev => 
+  prev.includes(phageName) 
+    ? prev.filter(p => p !== phageName)
+    : [...prev, phageName]
+);
 ```
 
-#### Complex State Updates
-Used for operations affecting multiple state variables:
+#### Complex State Operations
+Multi-step state updates for operations affecting multiple state variables:
 ```typescript
 const deleteCluster = (clusterName: string) => {
-  // 1. Validate operation
-  // 2. Collect dependent clusters
-  // 3. Update bacteria assignments
-  // 4. Update cluster ordering
-  // 5. Remove from cluster list
-  // 6. Update visibility
+  // 1. Validate operation (prevent deletion of Root cluster)
+  // 2. Identify dependent child clusters
+  // 3. Reassign bacteria to parent cluster
+  // 4. Update cluster hierarchy ordering
+  // 5. Remove cluster from all relevant state arrays
+  // 6. Update visibility arrays
+  // 7. Mark as having unsaved changes
 };
 ```
 
 ### State Synchronization
-- All state changes go through the `useAppState` hook
-- UI components receive state via props
-- Changes trigger re-renders through React's dependency system
-- D3 visualizations update via `useTreeVisualization` hook
+- **Central Hub**: All state changes flow through `useAppState` hook
+- **Component Props**: UI components receive state via props (unidirectional data flow)
+- **React Reactivity**: State changes trigger automatic re-renders via React's dependency system
+- **D3 Integration**: Visualization updates via `useTreeVisualization` hook responding to state changes
+
+### Data Persistence
+- **Session Export**: Complete application state serialized to JSON file
+- **Session Import**: JSON file parsed and validated before state restoration
+- **Theme Persistence**: User theme preference stored in localStorage
+- **Unsaved Changes**: Track modifications to warn users before navigation
 
 ## File Structure
 
-### Core Application Files
+### Application Root
 ```
 src/
-├── app/
-│   ├── page.tsx                    # Main application component
-│   ├── layout.tsx                  # App layout and metadata
-│   └── globals.css                 # Global styles
-├── components/
-│   ├── customizer/                 # Sidebar customization components
-│   ├── file-upload/               # File upload related components
-│   ├── modals/                    # Modal dialogs
-│   ├── ui/                        # Reusable UI components
-│   └── visualization/             # D3.js visualization components
-├── hooks/                         # Custom React hooks
-├── services/                      # Business logic services
+├── app/                           # Next.js App Router structure
+├── components/                    # React UI components organized by feature
+├── constants/                     # Application constants and configuration
+├── hooks/                         # Custom React hooks for state and logic
+├── services/                      # Business logic and external services
 ├── types/                         # TypeScript type definitions
-└── utils/                         # Utility functions
+└── utils/                         # Pure utility functions and helpers
 ```
 
-### Component Organization
-```
-components/
-├── customizer/
-│   ├── CustomiserPanel.tsx        # Main sidebar container
-│   ├── AddClusterForm.tsx         # Create new clusters
-│   ├── BacteriaAssigner.tsx       # Assign bacteria to clusters
-│   ├── ClusterHierarchyManager.tsx # Manage cluster hierarchy
-│   ├── VisibleClustersControl.tsx # Toggle cluster visibility
-│   └── SessionManager.tsx         # Import/export sessions
-├── file-upload/
-│   ├── FileUploader.tsx           # Main upload component
-│   ├── DropZone.tsx              # Drag-and-drop area
-│   └── UploadButton.tsx          # File selection button
-└── visualization/
-    ├── TreeMatrix.tsx             # Main visualization component
-    ├── TreeMatrixControls.tsx     # Visualization controls
-    └── SaveControls.tsx           # Export functionality
-```
+### App Directory (`src/app/`)
+**Next.js App Router files for application structure and metadata**
 
-## Development Guidelines
+- **`layout.tsx`** - Root layout component providing global HTML structure, metadata, and theme provider setup
+- **`page.tsx`** - Main application page component orchestrating the entire UI layout and state coordination
+- **`globals.css`** - Global CSS styles including Tailwind directives and custom global styles
+- **`favicon.ico`** - Application favicon
 
-### Adding New Features
+### Components Directory (`src/components/`)
 
-#### 1. Adding a New Cluster Operation
-1. Add validation logic to `DataService.validateClusterOperation()`
-2. Implement the operation in `useAppState` hook
-3. Add UI controls in appropriate customizer component
-4. Update TypeScript types if needed
+#### File Upload (`src/components/file-upload/`)
+**Components for handling Excel file uploads and processing**
 
-#### 2. Adding New Visualization Elements
-1. Extend `useTreeVisualization` hook with new D3 logic
-2. Add any new props to `TreeMatrixProps` interface
-3. Update theme handling if visual elements are theme-dependent
-4. Consider save/export implications
+- **`FileUploader.tsx`** - Main file upload component coordinating drag-and-drop and button upload methods
+- **`DropZone.tsx`** - Drag-and-drop area with visual feedback for file uploads
+- **`UploadButton.tsx`** - Traditional file selection button with file validation
+- **`index.ts`** - Barrel export for file upload components
 
-#### 3. Adding New Data Processing
-1. Create utility functions in `src/utils/`
-2. Add business logic to `DataService`
-3. Update type definitions in `src/types/index.ts`
-4. Add error handling and validation
+#### Customization Panel (`src/components/customizer/`)
+**Sidebar components for data manipulation and visualization control**
 
-### Code Style Guidelines
+- **`CustomiserPanel.tsx`** - Main sidebar container organizing all customization controls
+- **`AddClusterForm.tsx`** - Form component for creating new bacteria clusters
+- **`BacteriaAssigner.tsx`** - Interface for assigning bacteria to different clusters
+- **`ClusterHierarchyManager.tsx`** - Component for managing cluster creation and deletion
+- **`ClusterParentManager.tsx`** - Interface for modifying cluster parent-child relationships
+- **`SessionManager.tsx`** - Session import/export controls for saving and loading configurations
+- **`VisibleClustersControl.tsx`** - Toggle controls for cluster visibility in visualization
+- **`VisiblePhagesControl.tsx`** - Toggle controls for phage visibility in visualization
+- **`index.ts`** - Barrel export for customizer components
 
-#### TypeScript Usage
-- Always define interfaces for component props
-- Use strict typing - avoid `any` type
-- Define utility types for complex data structures
-- Use generics where appropriate for reusability
+#### Visualization (`src/components/visualization/`)
+**Components for D3.js-based data visualization and interaction**
 
-#### React Patterns
-- Use custom hooks for complex logic
-- Implement `useCallback` for event handlers passed to children
-- Use `useMemo` for expensive computations
-- Keep components focused on presentation
+- **`TreeMatrix.tsx`** - Main visualization component rendering bacteria-phage interaction matrix using D3.js
+- **`TreeMatrixControls.tsx`** - Control panel for visualization settings and options
+- **`SaveControls.tsx`** - Interface for exporting visualizations as images or data files
+- **`index.ts`** - Barrel export for visualization components
 
-#### D3.js Integration
-- Always use refs for D3 DOM manipulation
-- Clean up D3 elements in `useEffect` cleanup functions
-- Separate D3 logic into custom hooks
-- Handle React-D3 lifecycle carefully
+#### Modals (`src/components/modals/`)
+**Modal dialog components for detailed information display**
 
-### Testing Considerations
+- **`PhageClusterInfoModal.tsx`** - Modal displaying detailed statistics and information about phage clusters
+- **`index.ts`** - Barrel export for modal components
 
-#### Unit Testing
-- Test utility functions in isolation
-- Mock external dependencies (file reading, localStorage)
-- Test validation logic thoroughly
-- Test edge cases in data processing
+#### UI Components (`src/components/ui/`)
+**Reusable UI components and utilities**
 
-#### Integration Testing
-- Test complete user workflows (upload → customize → export)
-- Test state synchronization between components
-- Test error handling and recovery
+- **`LoadingSpinner.tsx`** - Loading indicator component with animation
+- **`ThemeToggle.tsx`** - Toggle component for switching between light and dark themes
+- **`index.ts`** - Barrel export for UI components
 
-#### Visual Testing
-- Test visualization rendering with various data sizes
-- Test theme switching
-- Test responsive behavior
+### Hooks Directory (`src/hooks/`)
+**Custom React hooks for state management and side effects**
 
-## API Reference
+- **`useAppState.ts`** - Central state management hook containing all application state and business logic
+- **`useTheme.ts`** - Hook for theme management with localStorage persistence
+- **`useTreeVisualization.ts`** - Hook managing D3.js visualization rendering and updates
+- **`useFileUpload.ts`** - Hook handling file upload processing and validation
+- **`useSaveVisualization.ts`** - Hook for exporting visualizations and data
+- **`useResizableSidebar.ts`** - Hook managing sidebar resizing and responsive behavior
+- **`useBeforeUnload.ts`** - Hook for warning users about unsaved changes before page navigation
 
-### Core Hooks
+### Services Directory (`src/services/`)
+**Business logic services and external integrations**
 
-#### `useAppState()`
-Central state management hook for the entire application.
+- **`dataService.ts`** - Core business logic for data processing, validation, and tree structure generation
+- **`themeService.ts`** - Singleton service for theme management with localStorage integration
 
-**Returns:**
-```typescript
-{
-  // State
-  data: ParsedExcelData | null;
-  allClusters: Cluster[];
-  visibleClusters: string[];
-  visiblePhages: string[];
-  bacteriaClusters: BacteriaClusters;
-  clusterBacteriaOrder: ClusterBacteriaOrder;
-  clusterChildrenOrder: ClusterChildrenOrder;
-  hasUnsavedChanges: boolean;
-  
-  // Actions
-  handleFile: (file: File) => Promise<void>;
-  addCluster: (name: string, parent?: string) => void;
-  deleteCluster: (name: string) => void;
-  updateClusterParent: (name: string, newParent: string | null) => void;
-  importSession: (file: File) => Promise<void>;
-  exportSession: () => void;
-  buildTreeData: () => TreeNode | null;
-  getClusterInfoData: () => PhageClusterData | null;
-}
-```
+### Types Directory (`src/types/`)
+**TypeScript type definitions and interfaces**
 
-#### `useTreeVisualization(svgRef, options)`
-Manages D3.js visualization rendering and updates.
+- **`index.ts`** - Comprehensive type definitions for:
+  - Data structures (BacteriaData, TreeNode, ParsedExcelData)
+  - Cluster management (Cluster, BacteriaClusters, ClusterBacteriaOrder)
+  - Component props (TreeMatrixProps, CustomiserPanelProps)
+  - Session management (SessionData, SessionExportData)
+  - UI state types and utility types
 
-**Parameters:**
-- `svgRef`: React ref to SVG element
-- `options`: Visualization configuration object
+### Utils Directory (`src/utils/`)
+**Pure utility functions and data processing helpers**
 
-#### `useTheme()`
-Manages application theme state and persistence.
+- **`excelParser.ts`** - Functions for parsing Excel files and converting to application data format
+- **`aggregatePhageClusterInfo.ts`** - Utility for calculating cluster statistics and phage interaction summaries
+- **`sessionUtils.ts`** - Functions for session data serialization, export, and import validation
+- **`treeCalculations.ts`** - Pure functions for tree structure calculations and transformations
+- **`visualizationUtils.ts`** - Helper functions for D3.js visualization setup and data formatting
+- **`arrayUtils.ts`** - General array manipulation and processing utilities
+- **`fileUtils.ts`** - File handling utilities including filename processing and validation
 
-**Returns:**
-```typescript
-{
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
-  setTheme: (theme: Theme) => void;
-}
-```
+### Constants Directory (`src/constants/`)
+**Application configuration and constant values**
 
-### Core Services
-
-#### `DataService`
-Static class providing business logic and data processing.
-
-**Key Methods:**
-- `handleFileUpload(file: File)`: Process Excel file upload
-- `buildTreeData(...)`: Generate hierarchical visualization data
-- `validateClusterOperation(...)`: Validate cluster operations
-- `handleSessionImport/Export(...)`: Session management
-
-#### `ThemeService`
-Singleton service for theme management with localStorage persistence.
-
-**Methods:**
-- `getInstance()`: Get singleton instance
-- `getCurrentTheme()`: Get current theme
-- `setTheme(theme)`: Set specific theme
-- `toggleTheme()`: Switch between light/dark
-
-### Utility Functions
-
-#### Excel Processing
-- `parseExcelFile(file: File)`: Convert Excel to application data structure
-- `getFileNameWithoutExtension(filename: string)`: Extract base filename
-
-#### Session Management
-- `exportSessionData(data: SessionData, filename: string)`: Create download
-- `importSessionData(file: File)`: Parse session file
-
-#### Data Processing
-- `aggregatePhageClusterInfo(treeData, headers)`: Generate cluster statistics
-- Various array and object manipulation utilities
-
-### Type Definitions
-
-#### Core Data Types
-```typescript
-interface BacteriaData {
-  name: string;
-  values?: number[];
-}
-
-interface TreeNode {
-  name: string;
-  children?: TreeNode[];
-  values?: number[];
-  parent?: string | null;
-}
-
-interface ParsedExcelData {
-  headers: string[];
-  treeData: TreeData;
-}
-```
-
-#### Cluster Management Types
-```typescript
-interface Cluster {
-  name: string;
-  parent: string | null;
-}
-
-interface BacteriaClusters {
-  [bacteriaName: string]: string;
-}
-
-interface ClusterBacteriaOrder {
-  [clusterName: string]: string[];
-}
-```
-
-#### Component Props Types
-- `TreeMatrixProps`: Main visualization component props
-- `CustomiserPanelProps`: Sidebar panel props
-- `FileUploaderProps`: File upload component props
+- **`index.ts`** - Application constants including:
+  - Default cluster names and settings
+  - Visualization configuration parameters
+  - Theme-related constants
+  - File processing limits and validation rules
 
 ---
-
-## Quick Reference for Common Tasks
-
-### Adding a New Cluster
-1. User clicks "Add Cluster" in sidebar
-2. `CustomiserPanel` → `AddClusterForm` → `useAppState.addCluster()`
-3. State updates trigger re-render of visualization
-4. New cluster appears in cluster list and visualization
-
-### Uploading New Data
-1. User selects Excel file in `FileUploader`
-2. `parseExcelFile()` processes file structure
-3. `DataService.handleFileUpload()` creates initial state
-4. `useAppState` updates all related state
-5. `TreeMatrix` renders new visualization
-
-### Modifying Visualization
-1. Changes to visibility controls update state
-2. `buildTreeData()` regenerates tree structure
-3. `useTreeVisualization` processes changes
-4. D3.js updates SVG elements
-5. Matrix reflects new configuration
-
-### Troubleshooting Workflow
-1. Check browser console for error messages
-2. Verify data structure in React DevTools
-3. Check state updates in `useAppState` hook
-4. Validate business logic in `DataService`
-5. Review D3 rendering in `useTreeVisualization`
-
-This documentation provides a comprehensive guide to understanding, maintaining, and extending the Bacteria-Phages Graph application. For specific implementation details, refer to the inline comments within each source file.
