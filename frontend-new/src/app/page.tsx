@@ -70,7 +70,7 @@ export default function Home() {
       {showSidebar && (
         <div className="flex h-full">
           <div
-            className={`h-full z-20 relative p-4 overflow-y-auto ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}
+            className={`h-full z-20 relative ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}
             style={{ width: sidebarWidth }}
           >
             <CustomiserPanel

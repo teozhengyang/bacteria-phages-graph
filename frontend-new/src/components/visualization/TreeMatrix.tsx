@@ -409,8 +409,8 @@ const TreeMatrix: React.FC<TreeMatrixProps> = ({
   const aggregatedData = aggregatePhageClusterInfo(treeData, headers);
 
   return (
-    <div>
-      <SaveControls onSave={handleSave} />
+    <div className="relative">
+      <SaveControls onSave={handleSave} theme={theme} />
       <svg ref={ref}></svg>
       <PhageClusterInfoModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} data={aggregatedData} />
     </div>

@@ -70,20 +70,29 @@ const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full text-base-content bg-base-200 rounded shadow-lg overflow-hidden">
-      {/* Sticky top bar */}
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-base-200 z-10 py-2 px-1 border-b border-base-300">
+    <div className={`flex flex-col h-full ${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      {/* Modern top bar with glassmorphism effect */}
+      <div className={`flex justify-between items-center p-4 sticky top-0 z-10 backdrop-blur-md ${theme === 'dark' ? 'bg-gray-800/80 border-gray-700' : 'bg-white/80 border-gray-200'} border-b`}>
         <button
-          className="btn btn-sm btn-outline transition hover:bg-base-300"
+          className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+            theme === 'dark' 
+              ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 border border-gray-600' 
+              : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 shadow-sm'
+          }`}
           onClick={toggleTheme}
           aria-label="Toggle Theme"
           title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
         >
-          {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+          <span className="text-sm">{theme === 'light' ? '🌙' : '☀️'}</span>
+          <span className="text-sm">{theme === 'light' ? 'Dark' : 'Light'}</span>
         </button>
 
         <button
-          className="btn btn-sm btn-error text-lg font-bold px-3 hover:bg-error/90 transition"
+          className={`w-8 h-8 rounded-lg font-bold transition-all duration-200 flex items-center justify-center ${
+            theme === 'dark' 
+              ? 'bg-red-600 hover:bg-red-500 text-white' 
+              : 'bg-red-500 hover:bg-red-600 text-white'
+          } shadow-sm`}
           onClick={() => setShowSidebar(false)}
           aria-label="Close Sidebar"
           title="Close Sidebar"
@@ -92,23 +101,26 @@ const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
         </button>
       </div>
 
-      {/* Scrollable main content */}
-      <div className="flex-grow overflow-y-auto">
+      {/* Scrollable main content with modern spacing */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         <VisibleClustersControl
           clusters={clusters}
           visibleClusters={visibleClusters}
           setVisibleClusters={setVisibleClusters}
           onDeleteCluster={onDeleteCluster}
+          theme={theme}
         />
 
         <AddClusterForm
           clusters={clusters}
           onAddCluster={addCluster}
+          theme={theme}
         />
 
         <ClusterParentManager
           clusters={clusters}
           onUpdateClusterParent={onUpdateClusterParent}
+          theme={theme}
         />
 
         <ClusterHierarchyManager
@@ -117,6 +129,7 @@ const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
           clusterChildrenOrder={clusterChildrenOrder}
           setClusterChildrenOrder={setClusterChildrenOrder}
           setClusterBacteriaOrder={setClusterBacteriaOrder}
+          theme={theme}
         />
 
         <BacteriaAssigner
@@ -128,23 +141,30 @@ const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
           setClusterBacteriaOrder={setClusterBacteriaOrder}
           setVisibleClusters={setVisibleClusters}
           visibleClusters={visibleClusters}
+          theme={theme}
         />
 
         <VisiblePhagesControl
           headers={headers}
           visiblePhages={visiblePhages}
           setVisiblePhages={setVisiblePhages}
+          theme={theme}
         />
 
         <SessionManager
           exportSession={exportSession}
           importSession={importSession}
+          theme={theme}
         />
 
-        {/* PhageClusterInfoModal Trigger */}
-        <div className="mt-4">
+        {/* PhageClusterInfoModal Trigger with modern styling */}
+        <div className="pt-2">
           <button
-            className="btn btn-sm btn-primary w-full text-base"
+            className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
+              theme === 'dark' 
+                ? 'bg-blue-600 hover:bg-blue-500 text-white' 
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
+            } shadow-sm`}
             onClick={() => setIsModalOpen(true)}
           >
             Show Phage Info
