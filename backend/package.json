@@ -4,9 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx --watch --env-file .env.development src/index.ts",
-    "dev:staging": "tsx --watch --env-file .env.staging src/index.ts",
-    "dev:prod": "tsx --watch --env-file .env.production src/index.ts",
+    "dev": "tsx --watch --env-file .env src/index.ts",
     "start": "node --env-file .env dist/index.js",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest",
@@ -25,6 +23,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/client": "^6.15.0",
     "express": "^5.1.0"
   },
   "devDependencies": {
@@ -39,6 +38,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.1.5",
     "prettier": "^3.6.2",
+    "prisma": "^6.15.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.41.0",
