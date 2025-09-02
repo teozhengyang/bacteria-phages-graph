@@ -7,3 +7,4 @@
  */
 
 export { default } from './FileUploader';
+export { default as LoadingSpinner } from './LoadingSpinner';

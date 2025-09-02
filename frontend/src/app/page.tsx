@@ -17,7 +17,7 @@
 
 import React, { JSX, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useAppContext } from '../context';
+import { useTheme, useData } from '../context';
 import { useResizableSidebar } from '../hooks/useResizableSidebar';
 import { useBeforeUnload } from '../hooks/useBeforeUnload';
 
@@ -48,10 +48,12 @@ const CustomiserPanel = dynamic(() => import('../components/customizer'), {
  * @returns {JSX.Element} The main application interface
  */
 export default function Home(): JSX.Element {
-  // Get all app state and actions from context
+  // Get theme from theme context
+  const { theme } = useTheme();
+  
+  // Get data state and actions from data context
   const {
     data,
-    theme,
     showSidebar,
     hasUnsavedChanges,
     visibleClusters,
@@ -60,7 +62,7 @@ export default function Home(): JSX.Element {
     clusterChildrenOrder,
     setShowSidebar,
     buildTreeData,
-  } = useAppContext();
+  } = useData();
   
   // Resizable sidebar functionality
   const {

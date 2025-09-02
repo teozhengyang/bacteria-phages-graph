@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { Check } from 'lucide-react';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import LoadingSpinner from './LoadingSpinner';
 
 /**
  * Props interface for the UploadButton component

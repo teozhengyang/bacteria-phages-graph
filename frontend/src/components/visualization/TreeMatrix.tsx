@@ -17,7 +17,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { useAppContext } from '../../context';
+import { useTheme, useData } from '../../context';
 import { TreeNode, ClusterBacteriaOrder, ClusterChildrenOrder } from '../../types';
 import TreeMatrixControls from './TreeMatrixControls';
 import { useTreeVisualization } from '../../hooks/useTreeVisualization';
@@ -53,7 +53,8 @@ const TreeMatrix: React.FC<TreeMatrixProps> = ({
   clusterBacteriaOrder   // Custom ordering for bacteria within clusters
 }) => {
   // Get theme and headers from context
-  const { theme, data } = useAppContext();
+  const { theme } = useTheme();
+  const { data } = useData();
   const headers = data?.headers || [];
   
   // Reference to the SVG element for D3 manipulation

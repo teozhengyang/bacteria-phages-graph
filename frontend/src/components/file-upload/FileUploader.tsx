@@ -22,7 +22,7 @@
 
 import React from 'react';
 import { Upload } from 'lucide-react';
-import { useAppContext } from '../../context';
+import { useTheme, useData } from '../../context';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import ThemeToggle from '../ui/ThemeToggle';
 import DropZone from './DropZone';
@@ -39,7 +39,8 @@ import UploadButton from './UploadButton';
  */
 const FileUploader: React.FC = () => {
   // Get theme and file handling from context
-  const { theme, toggleTheme, handleFile } = useAppContext();
+  const { theme, toggleTheme } = useTheme();
+  const { handleFile } = useData();
   /**
    * File upload state management
    * 

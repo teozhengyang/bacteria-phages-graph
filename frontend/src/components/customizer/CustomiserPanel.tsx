@@ -13,7 +13,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAppContext } from '../../context';
+import { useTheme, useData } from '../../context';
 import VisibleClustersControl from './VisibleClustersControl';
 import AddClusterForm from './AddClusterForm';
 import ClusterParentManager from './ClusterParentManager';
@@ -36,7 +36,10 @@ import PhageClusterInfoModal from '../modals/PhageClusterInfoModal';
  * @returns {JSX.Element} The complete customization sidebar
  */
 const CustomiserPanel: React.FC = () => {
-  // Get all necessary state and actions from context
+  // Get theme from theme context
+  const { theme, toggleTheme } = useTheme();
+  
+  // Get data state and actions from data context
   const {
     data,
     allClusters,
@@ -45,7 +48,6 @@ const CustomiserPanel: React.FC = () => {
     bacteriaClusters,
     clusterBacteriaOrder,
     clusterChildrenOrder,
-    theme,
     setVisibleClusters,
     setVisiblePhages,
     setBacteriaClusters,
@@ -56,11 +58,10 @@ const CustomiserPanel: React.FC = () => {
     updateClusterParent,
     importSession,
     exportSession,
-    toggleTheme,
     setShowSidebar,
     getClusterInfoData,
     getBacteriaList,
-  } = useAppContext();
+  } = useData();
 
   // State for controlling the phage cluster information modal
   const [isModalOpen, setIsModalOpen] = useState(false);
