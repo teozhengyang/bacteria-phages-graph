@@ -22,7 +22,7 @@
 
 import React from 'react';
 import { Upload } from 'lucide-react';
-import { FileUploaderProps } from '../../types';
+import { useAppContext } from '../../context';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import ThemeToggle from '../ui/ThemeToggle';
 import DropZone from './DropZone';
@@ -35,13 +35,11 @@ import UploadButton from './UploadButton';
  * animated elements, and comprehensive upload functionality. Handles both
  * drag-and-drop and traditional file selection methods.
  * 
- * @param {FileUploaderProps} props - Component props
- * @param {Function} props.onFile - Callback triggered when file is successfully uploaded
- * @param {string} props.theme - Current theme ('light' or 'dark')
- * @param {Function} props.toggleTheme - Function to switch themes
  * @returns {JSX.Element} The complete file upload interface
  */
-const FileUploader: React.FC<FileUploaderProps> = ({ onFile, theme, toggleTheme }) => {
+const FileUploader: React.FC = () => {
+  // Get theme and file handling from context
+  const { theme, toggleTheme, handleFile } = useAppContext();
   /**
    * File upload state management
    * 
@@ -145,7 +143,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFile, theme, toggleTheme 
           isUploaded={isUploaded}
           isLoading={isLoading}
           progress={progress}
-          onUpload={() => handleUpload(onFile)} // Pass the main onFile callback
+          onUpload={() => handleUpload(handleFile)} // Pass the context handleFile function
         />
       </div>
 

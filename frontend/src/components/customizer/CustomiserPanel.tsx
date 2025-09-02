@@ -6,13 +6,14 @@
  * session management, and phage cluster information display.
  * 
  * The panel is organized into collapsible sections for better user experience
- * and includes validation to prevent invalid operations.
+ * and includes validation to prevent invalid operations. Uses context-based
+ * state management for cleaner architecture.
  */
 
 'use client';
 
 import React, { useState } from 'react';
-import { CustomiserPanelProps } from '../../types';
+import { useAppContext } from '../../context';
 import VisibleClustersControl from './VisibleClustersControl';
 import AddClusterForm from './AddClusterForm';
 import ClusterParentManager from './ClusterParentManager';
@@ -32,35 +33,42 @@ import PhageClusterInfoModal from '../modals/PhageClusterInfoModal';
  * - Import/export session configurations
  * - View detailed phage cluster information
  * 
- * @param {CustomiserPanelProps} props - All configuration data and state setters
  * @returns {JSX.Element} The complete customization sidebar
  */
-const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
-  headers,                    // Array of phage names from the data
-  clusters,                   // All user-created clusters
-  visibleClusters,           // Currently visible clusters
-  visiblePhages,             // Currently visible phages
-  setVisibleClusters,        // Function to update visible clusters
-  setVisiblePhages,          // Function to update visible phages
-  bacteria,                  // All bacteria names from the data
-  bacteriaClusters,          // Mapping of bacteria to their clusters
-  setBacteriaClusters,       // Function to update bacteria-cluster assignments
-  clusterBacteriaOrder,      // Display order of bacteria within clusters
-  setClusterBacteriaOrder,   // Function to update bacteria ordering
-  addCluster,                // Function to create new clusters
-  deleteCluster,             // Function to remove clusters
-  updateClusterParent,       // Function to change cluster hierarchy
-  clusterChildrenOrder,      // Display order of child clusters
-  setClusterChildrenOrder,   // Function to update cluster children ordering
-  importSession,             // Function to import saved sessions
-  exportSession,             // Function to export current session
-  theme,                     // Current theme setting
-  toggleTheme,               // Function to toggle theme
-  setShowSidebar,           // Function to control sidebar visibility
-  clusterInfoData,          // Phage cluster interaction data for modal
-}) => {
+const CustomiserPanel: React.FC = () => {
+  // Get all necessary state and actions from context
+  const {
+    data,
+    allClusters,
+    visibleClusters,
+    visiblePhages,
+    bacteriaClusters,
+    clusterBacteriaOrder,
+    clusterChildrenOrder,
+    theme,
+    setVisibleClusters,
+    setVisiblePhages,
+    setBacteriaClusters,
+    setClusterBacteriaOrder,
+    setClusterChildrenOrder,
+    addCluster,
+    deleteCluster,
+    updateClusterParent,
+    importSession,
+    exportSession,
+    toggleTheme,
+    setShowSidebar,
+    getClusterInfoData,
+    getBacteriaList,
+  } = useAppContext();
+
   // State for controlling the phage cluster information modal
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Get computed data
+  const headers = data?.headers || [];
+  const bacteria = getBacteriaList();
+  const clusterInfoData = getClusterInfoData();
 
   /**
    * Handle cluster deletion with validation and confirmation
@@ -98,7 +106,7 @@ const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
     // Check for circular dependencies
     const wouldCreateCircle = (childName: string, potentialParentName: string): boolean => {
       if (childName === potentialParentName) return true;
-      const parent = clusters.find(c => c.name === potentialParentName);
+      const parent = allClusters.find(c => c.name === potentialParentName);
       if (!parent || !parent.parent) return false;
       return wouldCreateCircle(childName, parent.parent);
     };
@@ -146,7 +154,7 @@ const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
       {/* Scrollable main content with modern spacing */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         <VisibleClustersControl
-          clusters={clusters}
+          clusters={allClusters}
           visibleClusters={visibleClusters}
           setVisibleClusters={setVisibleClusters}
           onDeleteCluster={onDeleteCluster}
@@ -154,19 +162,19 @@ const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
         />
 
         <AddClusterForm
-          clusters={clusters}
+          clusters={allClusters}
           onAddCluster={addCluster}
           theme={theme}
         />
 
         <ClusterParentManager
-          clusters={clusters}
+          clusters={allClusters}
           onUpdateClusterParent={onUpdateClusterParent}
           theme={theme}
         />
 
         <ClusterHierarchyManager
-          clusters={clusters}
+          clusters={allClusters}
           clusterBacteriaOrder={clusterBacteriaOrder}
           clusterChildrenOrder={clusterChildrenOrder}
           setClusterChildrenOrder={setClusterChildrenOrder}
@@ -176,7 +184,7 @@ const CustomiserPanel: React.FC<CustomiserPanelProps> = ({
 
         <BacteriaAssigner
           bacteria={bacteria}
-          clusters={clusters}
+          clusters={allClusters}
           bacteriaClusters={bacteriaClusters}
           clusterBacteriaOrder={clusterBacteriaOrder}
           setBacteriaClusters={setBacteriaClusters}

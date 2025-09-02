@@ -11,15 +11,29 @@
  * - Save functionality for visualization export
  * - Theme-aware rendering
  * - Responsive layout
+ * - Context-based state management
  */
 
 'use client';
 
 import React, { useRef } from 'react';
-import { TreeMatrixProps } from '../../types';
+import { useAppContext } from '../../context';
+import { TreeNode, ClusterBacteriaOrder, ClusterChildrenOrder } from '../../types';
 import TreeMatrixControls from './TreeMatrixControls';
 import { useTreeVisualization } from '../../hooks/useTreeVisualization';
 import { useSaveVisualization } from '../../hooks/useSaveVisualization';
+
+/**
+ * Props interface for TreeMatrix component
+ */
+interface TreeMatrixProps {
+  treeData: TreeNode | null; // Hierarchical tree structure
+  visibleClusters: string[];
+  visiblePhages: string[];
+  bacteriaClusterOrderArr: string[];
+  clusterBacteriaOrder: ClusterBacteriaOrder;
+  clusterChildrenOrder: ClusterChildrenOrder;
+}
 
 /**
  * TreeMatrix - Primary visualization component
@@ -33,13 +47,15 @@ import { useSaveVisualization } from '../../hooks/useSaveVisualization';
  */
 const TreeMatrix: React.FC<TreeMatrixProps> = ({
   treeData,              // Hierarchical tree structure of bacteria and clusters
-  headers,               // Array of phage names for column headers
   visibleClusters,       // Clusters currently visible in the visualization
   visiblePhages,         // Phages currently visible in the visualization
-  theme = 'light',       // Theme setting for visual styling
   clusterChildrenOrder,  // Custom ordering for nested clusters
   clusterBacteriaOrder   // Custom ordering for bacteria within clusters
 }) => {
+  // Get theme and headers from context
+  const { theme, data } = useAppContext();
+  const headers = data?.headers || [];
+  
   // Reference to the SVG element for D3 manipulation
   const svgRef = useRef<SVGSVGElement>(null);
   
