@@ -1,8 +1,9 @@
-export { default as CustomiserPanel } from './CustomiserPanel';
-export { default as VisibleClustersControl } from './VisibleClustersControl';
-export { default as AddClusterForm } from './AddClusterForm';
-export { default as ClusterParentManager } from './ClusterParentManager';
-export { default as ClusterHierarchyManager } from './ClusterHierarchyManager';
-export { default as BacteriaAssigner } from './BacteriaAssigner';
-export { default as VisiblePhagesControl } from './VisiblePhagesControl';
-export { default as SessionManager } from './SessionManager';
+/**
+ * Customizer Components Export
+ * 
+ * Provides centralized exports for all customization panel components.
+ * The main CustomiserPanel component contains all the controls for managing
+ * clusters, bacteria assignments, visibility settings, and session management.
+ */
+
+export { default } from './CustomiserPanel';

@@ -139,92 +139,23 @@ export interface PhageClusterResult {
  */
 
 /**
- * Props interface for the FileUploader component
- * @interface FileUploaderProps
- * @property onFile - Callback function triggered when a file is uploaded
- * @property theme - Current theme setting ('light' or 'dark')
- * @property toggleTheme - Function to toggle between light and dark themes
- */
-export interface FileUploaderProps {
-  onFile: (file: File) => void;
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
-}
-
-/**
  * Props interface for the TreeMatrix visualization component
  * Contains all data and configuration needed for rendering the matrix
- * @interface TreeMatrixProps
+ * @interface TreeMatrixProps  
  * @property treeData - The hierarchical data structure to visualize
- * @property headers - Array of phage names for column headers
  * @property visibleClusters - Array of cluster names currently shown
  * @property visiblePhages - Array of phage names currently shown
  * @property bacteriaClusterOrderArr - Optional ordered list of cluster names
- * @property theme - Optional theme setting
  * @property clusterChildrenOrder - Ordering configuration for nested clusters
  * @property clusterBacteriaOrder - Ordering configuration for bacteria within clusters
  */
 export interface TreeMatrixProps {
   treeData: TreeNode | null;
-  headers: string[];
   visibleClusters: string[];
   visiblePhages: string[];
   bacteriaClusterOrderArr?: string[];
-  theme?: 'light' | 'dark';
   clusterChildrenOrder: ClusterChildrenOrder;
   clusterBacteriaOrder: ClusterBacteriaOrder;
-}
-
-/**
- * Props interface for the CustomiserPanel component
- * Contains all state management and configuration options for the sidebar
- * @interface CustomiserPanelProps
- * @property headers - Array of phage names from the data
- * @property clusters - Array of all available clusters
- * @property visibleClusters - Currently visible cluster names
- * @property visiblePhages - Currently visible phage names
- * @property setVisibleClusters - State setter for visible clusters
- * @property setVisiblePhages - State setter for visible phages
- * @property bacteria - Array of all bacteria names
- * @property bacteriaClusters - Mapping of bacteria to their clusters
- * @property setBacteriaClusters - State setter for bacteria-cluster assignments
- * @property clusterBacteriaOrder - Display order of bacteria within clusters
- * @property setClusterBacteriaOrder - State setter for bacteria ordering
- * @property addCluster - Function to create a new cluster
- * @property deleteCluster - Function to remove a cluster
- * @property updateClusterParent - Function to change cluster hierarchy
- * @property clusterChildrenOrder - Display order of child clusters
- * @property setClusterChildrenOrder - State setter for cluster children ordering
- * @property importSession - Function to import saved session configuration
- * @property exportSession - Function to export current session configuration
- * @property theme - Current theme setting
- * @property toggleTheme - Function to toggle theme
- * @property setShowSidebar - Function to control sidebar visibility
- * @property clusterInfoData - Phage cluster interaction data for modal display
- */
-export interface CustomiserPanelProps {
-  headers: string[];
-  clusters: Cluster[];
-  visibleClusters: string[];
-  visiblePhages: string[];
-  setVisibleClusters: React.Dispatch<React.SetStateAction<string[]>>;
-  setVisiblePhages: React.Dispatch<React.SetStateAction<string[]>>;
-  bacteria: string[];
-  bacteriaClusters: BacteriaClusters;
-  setBacteriaClusters: React.Dispatch<React.SetStateAction<BacteriaClusters>>;
-  clusterBacteriaOrder: ClusterBacteriaOrder;
-  setClusterBacteriaOrder: React.Dispatch<React.SetStateAction<ClusterBacteriaOrder>>;
-  addCluster: (clusterName: string, parentName?: string | null) => void;
-  deleteCluster: (clusterName: string) => void;
-  updateClusterParent: (clusterName: string, newParent: string | null) => void;
-  clusterChildrenOrder: ClusterChildrenOrder;
-  setClusterChildrenOrder: React.Dispatch<React.SetStateAction<ClusterChildrenOrder>>;
-  importSession: (file: File) => void;
-  exportSession: () => void;
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
-  setShowSidebar: React.Dispatch<React.SetStateAction<boolean>>;
-  clusterInfoData: PhageClusterData | null;
 }
 
 /**
