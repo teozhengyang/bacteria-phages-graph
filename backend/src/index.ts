@@ -1,11 +1,6 @@
-import { middleware } from "#middlewares/middlewares.js";
-import express from "express";
+import "tsconfig-paths/register";
+import App from "#app.js";
 
-const app = express();
-const port = process.env.PORT ?? "9001";
+const app = new App();
 
-app.get("/", middleware);
-
-app.listen(port, () => {
-  console.log(`App listening on port ${port}`);
-});
+app.start();
