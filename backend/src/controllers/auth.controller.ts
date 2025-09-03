@@ -9,7 +9,7 @@ import { z } from "zod";
 
 interface AuthRequest extends Request {
     cookies: Record<string, string>;
-    user?: { userId: number };
+    userId?: number;
 }
 
 const AuthController = {
@@ -78,7 +78,7 @@ const AuthController = {
 
     logout: async (req: AuthRequest, res: Response) => {
         try {
-            const userId = req.user?.userId;
+            const userId = req.userId;
 
             if (userId) {
                 await prisma.user.update({
@@ -99,8 +99,13 @@ const AuthController = {
 
     refreshToken: async (req: AuthRequest, res: Response) => {
         try {
-            const userId = req.user?.userId;
+            const userId = req.userId;
             const refreshToken = req.cookies.refreshToken;
+
+            // Check if userId exists
+            if (!userId) {
+                return Send.unauthorized(res, null, "User not authenticated");
+            }
 
             // find user
             const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -145,6 +150,8 @@ const AuthController = {
         try {
             // find user if exists
             const existingUser = await prisma.user.findUnique({ where: { email } });
+            console.log(existingUser);
+            console.log(email);
             if (existingUser) return Send.error(res, null, "Email already in use");
 
             // hash password
