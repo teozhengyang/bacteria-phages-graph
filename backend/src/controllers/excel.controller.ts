@@ -1,9 +1,10 @@
+import excelServices from "#services/excel.services.js";
 import ExcelParserUtils from '#utils/excelParser.utils.js';
 import Send from '#utils/response.utils.js';
 import { Request, Response } from 'express';
 
 const ExcelFileController = {
-    uploadExcelFile: (req: Request, res: Response) => {
+    uploadExcelFile: async (req: Request, res: Response) => {
         try {
             const file = req.file;
             
@@ -15,29 +16,11 @@ const ExcelFileController = {
             // Parse the Excel file
             const parsedData = ExcelParserUtils.parseExcelFile(file.buffer);
 
-            console.log('Parsed data:', {
-                bacteriaCount: parsedData.bacteriaNames.length,
-                phageCount: parsedData.phageNames.length,
-                sampleBacteria: parsedData.bacteriaNames.slice(0, 5),
-                samplePhages: parsedData.phageNames.slice(0, 5)
-            });
-            
+            // save to database
+            await excelServices.ExcelService.saveExcelData(parsedData, file.originalname);
+
             // Return success response with parsed data
-            return Send.success(res, {
-                filename: file.originalname,
-                parsedData: {
-                    bacteriaCount: parsedData.bacteriaNames.length,
-                    bacteriaNames: parsedData.bacteriaNames.slice(0, 10), // Show first 10 bacteria as preview
-                    phageCount: parsedData.phageNames.length,
-                    phageNames: parsedData.phageNames.slice(0, 10), // Show first 10 phages as preview
-                    sampleInteractions: parsedData.interactions.slice(0, 3).map((row, bacteriaIndex) => ({
-                        bacteria: parsedData.bacteriaNames[bacteriaIndex],
-                        interactionCount: row.reduce((sum: number, val: number) => sum + val, 0),
-                        interactions: row.slice(0, 5) // Show first 5 interactions
-                    }))
-                },
-                size: file.size,
-            }, 'Excel file processed successfully');
+            return Send.success(res, "filename: " + file.originalname, 'Excel file processed successfully');
 
         } catch (error) {
             console.error('Excel processing error:', error);

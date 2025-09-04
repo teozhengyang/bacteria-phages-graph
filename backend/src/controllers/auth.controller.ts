@@ -1,5 +1,5 @@
 import authConfig from "#configs/auth.config.js";
-import { prisma } from "#db.js";
+import authServices from "#services/auth.services.js";
 import Send from "#utils/response.utils.js";
 import authSchema from "#validations/auth.schema.js";
 import bcrypt from "bcryptjs";
@@ -19,7 +19,7 @@ const AuthController = {
 
         try {
             // find user
-            const user = await prisma.user.findUnique({ where: { email } });
+            const user = await authServices.authService.findUserByEmail(email);
             if (!user) return Send.error(res, null, "Invalid email");
             
             // check password
@@ -41,10 +41,7 @@ const AuthController = {
             );
 
             // update refresh token in database
-            await prisma.user.update({
-                data: { refreshToken },
-                where: { email }
-            });
+            await authServices.authService.updateRefreshToken(user.id, refreshToken);
 
             // set accessToken in cookie
             res.cookie("accessToken", accessToken, {
@@ -80,12 +77,7 @@ const AuthController = {
         try {
             const userId = req.userId;
 
-            if (userId) {
-                await prisma.user.update({
-                    data: { refreshToken: null },
-                    where: { id: userId }
-                });
-            }
+            if (userId) await authServices.authService.updateRefreshToken(userId, null);
 
             res.clearCookie("accessToken");
             res.clearCookie("refreshToken");
@@ -103,22 +95,16 @@ const AuthController = {
             const refreshToken = req.cookies.refreshToken;
 
             // Check if userId exists
-            if (!userId) {
-                return Send.unauthorized(res, null, "User not authenticated");
-            }
+            if (!userId) return Send.unauthorized(res, null, "User not authenticated");
 
             // find user
-            const user = await prisma.user.findUnique({ where: { id: userId } });
+            const user = await authServices.authService.findUserById(userId);
             
             // check if user has a refresh token
-            if (!user?.refreshToken) {
-                return Send.unauthorized(res, null, "Refresh token not found");
-            }
+            if (!user?.refreshToken)  return Send.unauthorized(res, null, "Refresh token not found");
 
             // check for valid refresh token
-            if (user.refreshToken !== refreshToken) {
-                return Send.unauthorized(res, null, "Invalid refresh token");
-            }
+            if (user.refreshToken !== refreshToken) return Send.unauthorized(res, null, "Invalid refresh token");
 
             // create access token
             const accessToken = jwt.sign(
@@ -149,22 +135,14 @@ const AuthController = {
 
         try {
             // find user if exists
-            const existingUser = await prisma.user.findUnique({ where: { email } });
-            console.log(existingUser);
-            console.log(email);
+            const existingUser = await authServices.authService.findUserByEmail(email);
             if (existingUser) return Send.error(res, null, "Email already in use");
 
             // hash password
             const hashedPassword = await bcrypt.hash(password, 10);
 
             // create new user
-            const newUser = await prisma.user.create({
-                data: {
-                    email,
-                    password: hashedPassword,
-                    username
-                }
-            });
+            const newUser = await authServices.authService.createUser(email, hashedPassword, username);
 
             return Send.success(res, {
                 email: newUser.email,
