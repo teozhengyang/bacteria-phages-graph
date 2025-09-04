@@ -1,6 +1,6 @@
 import appConfig from "#configs/app.config.js";
 import authRoutes from "#routes/auth.routes.js";
-import excelDataRoutes from "#routes/excelFile.routes.js";
+import excelDataRoutes from "#routes/excel.routes.js";
 import userRoutes from "#routes/user.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";

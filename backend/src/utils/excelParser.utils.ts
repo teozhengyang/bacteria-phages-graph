@@ -1,4 +1,4 @@
-import { ParsedExcelData } from '#types/excelFileData.js';
+import { ParsedExcelData } from '#types/excel.types.js';
 import * as XLSX from 'xlsx';
 
 // Parse Excel file with built-in validation

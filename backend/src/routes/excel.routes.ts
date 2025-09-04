@@ -1,5 +1,5 @@
-import ExcelFileController from '#controllers/excelFile.controller.js';
-import ExcelFileMiddleware from '#middlewares/excelFile.middleware.js';
+import ExcelFileController from '#controllers/excel.controller.js';
+import ExcelFileMiddleware from '#middlewares/excel.middleware.js';
 import ValidationMiddleware from '#middlewares/validation.middleware.js';
 import BaseRouter, { RouteConfig } from '#routes/router.js';
 import fileSchema from '#validations/file.schema.js';
