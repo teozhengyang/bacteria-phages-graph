@@ -4,14 +4,22 @@ import Send from '#utils/response.utils.js';
 import { Request, Response } from 'express';
 
 const ExcelFileController = {
+    getAllExcelFiles: async (req: Request, res: Response) => {
+        try {
+            const files = await excelServices.ExcelService.getAllExcelFiles();  
+            return Send.success(res, { files }, "All files fetched successfully");
+        } catch (error) {
+            console.error('Error fetching Excel files:', error);
+            return Send.error(res, null, 'Internal server error while fetching Excel files.');
+        }  
+    },
+
     uploadExcelFile: async (req: Request, res: Response) => {
         try {
             const file = req.file;
             
             // Check if file exists 
-            if (!file) {
-                return Send.badRequest(res, null, 'No file uploaded');
-            } 
+            if (!file) return Send.badRequest(res, null, 'No file uploaded');
 
             // Parse the Excel file
             const parsedData = ExcelParserUtils.parseExcelFile(file.buffer);
@@ -40,7 +48,6 @@ const ExcelFileController = {
             return Send.error(res, null, 'Internal server error while processing the Excel file.');
         }
     }
-
 };
 
 export default ExcelFileController;

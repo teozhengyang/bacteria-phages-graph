@@ -2,6 +2,12 @@ import { prisma } from "#db.js";
 import { ParsedExcelData } from "#types/excel.types.js";
 
 const ExcelService = {
+    getAllExcelFiles: async () => {
+        return prisma.excelData.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
+    },
+
     saveExcelData: async (parsedData: ParsedExcelData, fileName: string) => {
         return prisma.excelData.create({
             data: {

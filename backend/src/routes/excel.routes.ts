@@ -16,6 +16,13 @@ class ExcelFileRouter extends BaseRouter {
                     ValidationMiddleware.validateFile(fileSchema.excelFile)
                 ],
                 path: '/upload'
+            },
+            {
+                // get all excel files
+                handler: ExcelFileController.getAllExcelFiles,
+                method: 'get',
+                middlewares: [],
+                path: '/all'
             }
         ];
     }
