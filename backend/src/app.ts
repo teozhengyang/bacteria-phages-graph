@@ -1,5 +1,6 @@
 import appConfig from "#configs/app.config.js";
 import authRoutes from "#routes/auth.routes.js";
+import excelDataRoutes from "#routes/excelFile.routes.js";
 import userRoutes from "#routes/user.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -41,6 +42,8 @@ class App {
         this.app.use("/api/auth", authRoutes);
         // /api/user/*
         this.app.use("/api/user", userRoutes);
+        // /api/excel/*
+        this.app.use("/api/excel", excelDataRoutes);
     }
 }
 
