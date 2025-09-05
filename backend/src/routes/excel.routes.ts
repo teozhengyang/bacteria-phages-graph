@@ -32,6 +32,13 @@ class ExcelRouter extends BaseRouter {
                     ValidationMiddleware.validateBody(fileSchema.updateExcelFileNameRequest)
                 ],
                 path: '/update-name/:id'
+            },
+            {
+                // delete excel file
+                handler: ExcelController.deleteExcelFile,
+                method: 'delete',
+                middlewares: [],
+                path: '/delete/:id'
             }
         ];
     }

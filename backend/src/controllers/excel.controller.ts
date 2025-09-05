@@ -1,4 +1,4 @@
-import excelServices from "#services/excel.services.js";
+import ExcelService from "#services/excel.services.js";
 import ExcelParserUtils from '#utils/excelParser.utils.js';
 import Send from '#utils/response.utils.js';
 import excelSchema from '#validations/excel.schema.js';
@@ -6,10 +6,30 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 
 const ExcelController = {
+
+    deleteExcelFile: async (req: Request, res: Response) => {
+        try {
+            // Get id from URL params
+            const id = req.params.id;
+
+            if (!id || typeof id !== 'string' || id.trim() === '') {
+                return Send.badRequest(res, null, 'Invalid file ID provided.');
+            }
+
+            // Delete the file
+            await ExcelService.deleteFile(id);
+
+            return Send.success(res, null, 'File deleted successfully.');
+        } catch (error) {
+            console.error('Error deleting file:', error);
+            return Send.error(res, null, 'Internal server error while deleting file.');
+        }
+    },
+
     getAllExcelFiles: async (req: Request, res: Response) => {
         try {
             // get all files
-            const files = await excelServices.ExcelService.getAllExcelFiles();  
+            const files = await ExcelService.getAllExcelFiles();
             return Send.success(res, { files }, "All files fetched successfully");
         } catch (error) {
             console.error('Error fetching Excel files:', error);
@@ -31,7 +51,7 @@ const ExcelController = {
             }
 
             // update filename
-            await excelServices.ExcelService.updateFileName(id, newFileName.trim());
+            await ExcelService.updateFileName(id, newFileName.trim());
             
             return Send.success(res, null, 'File name updated successfully.');
         } catch (error) {
@@ -51,7 +71,7 @@ const ExcelController = {
             const parsedData = ExcelParserUtils.parseExcelFile(file.buffer);
 
             // save to database
-            await excelServices.ExcelService.saveExcelData(parsedData, file.originalname);
+            await ExcelService.saveExcelData(parsedData, file.originalname);
 
             // Return success response with parsed data
             return Send.success(res, "filename: " + file.originalname, 'Excel file processed successfully');

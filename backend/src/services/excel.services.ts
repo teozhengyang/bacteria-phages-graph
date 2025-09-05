@@ -2,6 +2,13 @@ import { prisma } from "#db.js";
 import { ParsedExcelData } from "#types/excel.types.js";
 
 const ExcelService = {
+    
+    deleteFile: async (id: string) => {
+        return prisma.excelData.delete({
+            where: { id: Number(id) }
+        });
+    },
+
     getAllExcelFiles: async () => {
         return prisma.excelData.findMany({
             orderBy: { createdAt: 'desc' }
@@ -27,6 +34,4 @@ const ExcelService = {
     }
 };
 
-export default {
-    ExcelService
-};
+export default ExcelService;
