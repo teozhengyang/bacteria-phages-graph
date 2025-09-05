@@ -1,37 +1,37 @@
-import ExcelFileController from '#controllers/excel.controller.js';
-import ExcelFileMiddleware from '#middlewares/excel.middleware.js';
+import ExcelController from '#controllers/excel.controller.js';
+import ExcelMiddleware from '#middlewares/excel.middleware.js';
 import ValidationMiddleware from '#middlewares/validation.middleware.js';
 import BaseRouter, { RouteConfig } from '#routes/router.js';
-import fileSchema from '#validations/file.schema.js';
+import fileSchema from '#validations/excel.schema.js';
 
 class ExcelRouter extends BaseRouter {
     protected routes(): RouteConfig[] {
         return [
             {
                 // add excel file
-                handler: ExcelFileController.uploadExcelFile,
+                handler: ExcelController.uploadExcelFile,
                 method: 'post',
                 middlewares: [
-                    ExcelFileMiddleware.uploadExcelFile,
+                    ExcelMiddleware.uploadExcelFile,
                     ValidationMiddleware.validateFile(fileSchema.excelFile)
                 ],
                 path: '/upload'
             },
             {
                 // get all excel files
-                handler: ExcelFileController.getAllExcelFiles,
+                handler: ExcelController.getAllExcelFiles,
                 method: 'get',
                 middlewares: [],
                 path: '/all'
             },
             {
                 // update excel file name
-                handler: ExcelFileController.updateFileName,
+                handler: ExcelController.updateExcelFile,
                 method: 'patch',
                 middlewares: [
                     ValidationMiddleware.validateBody(fileSchema.updateExcelFileNameRequest)
                 ],
-                path: '/update-name'
+                path: '/update-name/:id'
             }
         ];
     }

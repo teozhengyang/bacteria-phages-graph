@@ -10,13 +10,13 @@ const excelFile = z.object({
 });
 
 const updateExcelFileNameRequest = z.object({
-    newFileName: z.string().min(1, 'New file name is required'),
-    oldFileName: z.string().min(1, 'Old file name is required'),
+    newFileName: z.string().min(1, 'New file name is required')
 });
 
-const fileSchema = {
+
+const excelSchema = {
     excelFile,
     updateExcelFileNameRequest
 };
 
-export default fileSchema;
+export default excelSchema;

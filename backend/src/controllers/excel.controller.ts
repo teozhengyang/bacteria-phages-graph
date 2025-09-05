@@ -1,11 +1,11 @@
 import excelServices from "#services/excel.services.js";
 import ExcelParserUtils from '#utils/excelParser.utils.js';
 import Send from '#utils/response.utils.js';
-import fileSchema from '#validations/file.schema.js';
+import excelSchema from '#validations/excel.schema.js';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 
-const ExcelFileController = {
+const ExcelController = {
     getAllExcelFiles: async (req: Request, res: Response) => {
         try {
             // get all files
@@ -17,19 +17,21 @@ const ExcelFileController = {
         }  
     },
 
-    updateFileName: async (req: Request, res: Response) => {
+    updateExcelFile: async (req: Request, res: Response) => {
         try {
-            // check filenames
-            const { newFileName, oldFileName } = req.body as z.infer<typeof fileSchema.updateExcelFileNameRequest>;
-            if (!oldFileName || typeof oldFileName !== 'string' || oldFileName.trim() === '') {
-                return Send.badRequest(res, null, 'Invalid old file name provided.');
+            // Get id from URL params and newFileName from body
+            const id = req.params.id;
+            const { newFileName } = req.body as z.infer<typeof excelSchema.updateExcelFileNameRequest>;
+            
+            if (!id || typeof id !== 'string' || id.trim() === '') {
+                return Send.badRequest(res, null, 'Invalid file ID provided.');
             }
             if (!newFileName || typeof newFileName !== 'string' || newFileName.trim() === '') {
                 return Send.badRequest(res, null, 'Invalid new file name provided.');
             }
 
             // update filename
-            await excelServices.ExcelService.updateFileName(oldFileName.trim(), newFileName.trim());
+            await excelServices.ExcelService.updateFileName(id, newFileName.trim());
             
             return Send.success(res, null, 'File name updated successfully.');
         } catch (error) {
@@ -74,4 +76,4 @@ const ExcelFileController = {
     }
 };
 
-export default ExcelFileController;
+export default ExcelController;

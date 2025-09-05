@@ -13,8 +13,8 @@ const excelFileOptions = {
 // Create Excel-specific upload middleware
 const uploadExcelFile = FileMiddleware.UploadFileMiddleware(excelFileOptions);
 
-const ExcelFileMiddleware = {
+const ExcelMiddleware = {
     uploadExcelFile,
 };
 
-export default ExcelFileMiddleware;
+export default ExcelMiddleware;

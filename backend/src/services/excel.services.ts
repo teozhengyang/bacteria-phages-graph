@@ -19,10 +19,10 @@ const ExcelService = {
         });
     },
 
-    updateFileName: async (oldFileName: string, newFileName: string) => {
+    updateFileName: async (id: string, newFileName: string) => {
         return prisma.excelData.update({
             data: { fileName: newFileName },
-            where: { fileName: oldFileName }
+            where: { id: Number(id) }
         });
     }
 };
