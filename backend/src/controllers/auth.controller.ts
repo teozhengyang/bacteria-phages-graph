@@ -20,11 +20,11 @@ const AuthController = {
         try {
             // find user
             const user = await authService.findUserByEmail(email);
-            if (!user) return Send.error(res, null, "Invalid email");
+            if (!user) return Send.badRequest(res, null, `No account found with email address "${email}". Please check your email or register for a new account.`);
             
             // check password
             const isPasswordValid = await bcrypt.compare(password, user.password);
-            if (!isPasswordValid) return Send.error(res, null, "Invalid password");
+            if (!isPasswordValid) return Send.badRequest(res, null, "The password you entered is incorrect. Please try again or reset your password.");
 
             // get accessToken
             const accessToken = jwt.sign(
@@ -136,7 +136,7 @@ const AuthController = {
         try {
             // find user if exists
             const existingUser = await authService.findUserByEmail(email);
-            if (existingUser) return Send.error(res, null, "Email already in use");
+            if (existingUser) return Send.badRequest(res, null, `An account with email "${email}" already exists. Please use a different email address or sign in to your existing account.`);
 
             // hash password
             const hashedPassword = await bcrypt.hash(password, 10);
