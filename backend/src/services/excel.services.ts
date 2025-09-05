@@ -17,6 +17,13 @@ const ExcelService = {
                 phages: parsedData.phageNames,
             }
         });
+    },
+
+    updateFileName: async (oldFileName: string, newFileName: string) => {
+        return prisma.excelData.update({
+            data: { fileName: newFileName },
+            where: { fileName: oldFileName }
+        });
     }
 };
 

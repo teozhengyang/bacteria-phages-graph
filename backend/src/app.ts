@@ -30,7 +30,7 @@ class App {
         this.app.use(cookieParser());
         this.app.use(cors({
             credentials: true,
-            methods: ["GET", "POST", "DELETE"],
+            methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
             origin: [
                 'http://localhost:3000',
             ]

@@ -9,8 +9,14 @@ const excelFile = z.object({
     size: z.number().positive('File size must be positive'),
 });
 
+const updateExcelFileNameRequest = z.object({
+    newFileName: z.string().min(1, 'New file name is required'),
+    oldFileName: z.string().min(1, 'Old file name is required'),
+});
+
 const fileSchema = {
-    excelFile 
+    excelFile,
+    updateExcelFileNameRequest
 };
 
 export default fileSchema;

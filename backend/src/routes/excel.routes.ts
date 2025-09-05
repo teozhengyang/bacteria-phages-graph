@@ -4,7 +4,7 @@ import ValidationMiddleware from '#middlewares/validation.middleware.js';
 import BaseRouter, { RouteConfig } from '#routes/router.js';
 import fileSchema from '#validations/file.schema.js';
 
-class ExcelFileRouter extends BaseRouter {
+class ExcelRouter extends BaseRouter {
     protected routes(): RouteConfig[] {
         return [
             {
@@ -23,9 +23,18 @@ class ExcelFileRouter extends BaseRouter {
                 method: 'get',
                 middlewares: [],
                 path: '/all'
+            },
+            {
+                // update excel file name
+                handler: ExcelFileController.updateFileName,
+                method: 'patch',
+                middlewares: [
+                    ValidationMiddleware.validateBody(fileSchema.updateExcelFileNameRequest)
+                ],
+                path: '/update-name'
             }
         ];
     }
 }
 
-export default new ExcelFileRouter().router;
+export default new ExcelRouter().router;
