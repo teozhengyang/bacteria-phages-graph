@@ -1,4 +1,4 @@
-import { prisma } from "#db.js";
+import UserService from "#services/user.services.js";
 import Send from "#utils/response.utils.js";
 import { Request, Response } from "express";
 
@@ -14,16 +14,7 @@ const UserController = {
             if (!userId) return Send.unauthorized(res, null, "User ID missing");
 
             // get user
-            const user = await prisma.user.findUnique({
-                select: {
-                    createdAt: true,
-                    email: true,
-                    id: true,
-                    updatedAt: true,
-                    username: true
-                },
-                where: { id: userId }
-            });
+            const user = await UserService.getUserById(userId);
             if (!user) return Send.notFound(res, {}, "User not found");
 
             return Send.success(res, { user });

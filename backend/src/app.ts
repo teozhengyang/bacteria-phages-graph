@@ -1,5 +1,6 @@
 import appConfig from "#configs/app.config.js";
 import authRoutes from "#routes/auth.routes.js";
+import excelDataRoutes from "#routes/excel.routes.js";
 import userRoutes from "#routes/user.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -29,7 +30,7 @@ class App {
         this.app.use(cookieParser());
         this.app.use(cors({
             credentials: true,
-            methods: ["GET", "POST", "DELETE"],
+            methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
             origin: [
                 'http://localhost:3000',
             ]
@@ -41,6 +42,8 @@ class App {
         this.app.use("/api/auth", authRoutes);
         // /api/user/*
         this.app.use("/api/user", userRoutes);
+        // /api/excel/*
+        this.app.use("/api/excel", excelDataRoutes);
     }
 }
 
