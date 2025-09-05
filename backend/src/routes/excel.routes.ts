@@ -1,4 +1,5 @@
 import ExcelController from '#controllers/excel.controller.js';
+import AuthMiddleware from "#middlewares/auth.middleware.js";
 import ExcelMiddleware from '#middlewares/excel.middleware.js';
 import ValidationMiddleware from '#middlewares/validation.middleware.js';
 import BaseRouter, { RouteConfig } from '#routes/router.js';
@@ -12,6 +13,7 @@ class ExcelRouter extends BaseRouter {
                 handler: ExcelController.uploadExcelFile,
                 method: 'post',
                 middlewares: [
+                    AuthMiddleware.authenticateUser,
                     ExcelMiddleware.uploadExcelFile,
                     ValidationMiddleware.validateFile(fileSchema.excelFile)
                 ],
@@ -21,7 +23,7 @@ class ExcelRouter extends BaseRouter {
                 // get all excel files
                 handler: ExcelController.getAllExcelFiles,
                 method: 'get',
-                middlewares: [],
+                middlewares: [AuthMiddleware.authenticateUser],
                 path: '/all'
             },
             {
@@ -29,6 +31,7 @@ class ExcelRouter extends BaseRouter {
                 handler: ExcelController.updateExcelFile,
                 method: 'patch',
                 middlewares: [
+                    AuthMiddleware.authenticateUser,
                     ValidationMiddleware.validateBody(fileSchema.updateExcelFileNameRequest)
                 ],
                 path: '/update-name/:id'
@@ -37,7 +40,7 @@ class ExcelRouter extends BaseRouter {
                 // delete excel file
                 handler: ExcelController.deleteExcelFile,
                 method: 'delete',
-                middlewares: [],
+                middlewares: [AuthMiddleware.authenticateUser],
                 path: '/delete/:id'
             }
         ];
