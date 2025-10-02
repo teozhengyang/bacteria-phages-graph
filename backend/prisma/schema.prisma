@@ -8,41 +8,39 @@ datasource db {
 }
 
 model User {
-    id           Int      @id @default(autoincrement())
-    username     String   @unique
-    email        String   @unique
+    id           Int          @id @default(autoincrement())
+    username     String       @unique
+    email        String       @unique
     password     String
     refreshToken String?
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @updatedAt
-
-    jsonConfigs  JsonConfig[]
-}
+    createdAt    DateTime     @default(now())
+    updatedAt    DateTime     @updatedAt
+    dataConfigs  DataConfig[]
+} 
 
 model ExcelData {
-    id           Int       @id @default(autoincrement())
-    fileName     String    @unique
+    id           Int          @id @default(autoincrement())
+    fileName     String       @unique
     bacteria     String[]
     phages       String[]
     interactions Json 
-    createdAt    DateTime @default(now())  
-
-    jsonConfigs  JsonConfig[]
+    createdAt    DateTime     @default(now())  
+    dataConfigs  DataConfig[]
 }
 
-model JsonConfig {
-    id          Int       @id @default(autoincrement())
-    configName  String    @unique
-    sessionData Json
-    createdAt   DateTime  @default(now())
-    updatedAt   DateTime  @updatedAt
+model DataConfig {
+    id              Int       @id @default(autoincrement())
+    configName      String
+    description     String?
+    userId          Int
+    excelDataId     Int
+    bacteriaClusters Json     // Store cluster information as JSON
+    createdAt       DateTime  @default(now())
+    updatedAt       DateTime  @updatedAt
     
-    userId      Int       
-    user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-    excelDataId Int       
-    excelData   ExcelData @relation(fields: [excelDataId], references: [id], onDelete: Cascade)      
-
+    // Relationships
+    user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    excelData       ExcelData @relation(fields: [excelDataId], references: [id], onDelete: Cascade)
+    
     @@unique([userId, excelDataId, configName])
-    @@index([userId])
-    @@index([excelDataId])
 }
